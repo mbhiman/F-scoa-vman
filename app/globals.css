@@ -8,10 +8,10 @@
   --background: #F4F7FC;
   --foreground: #0f172a;
 
-  --primary: #2463EB;
+  --primary: #1642B9;
   --primary-hover: #1A52CC;
 
-  --secondary: #06B6D4;
+  --secondary: #FFE70D;
   --secondary-hover: #0891B2;
 
   --accent: #F5A623;
@@ -33,8 +33,8 @@
   /* Added this */
   --admin-border: #E2E8F0;
 
-  --admin-primary: #3852B4;
-  --admin-primary-hover: #ea580c;
+  --admin-primary: #1642B9;
+  --admin-primary-hover: #0044ff;
   --admin-accent-soft: rgba(249, 115, 22, 0.1);
 
   /* =========================
@@ -145,8 +145,8 @@
   /* Added this */
   --admin-border: #1f1f22;
 
-  --admin-primary: #fb923c;
-  --admin-primary-hover: #f97316;
+  --admin-primary: #1642B9;
+  --admin-primary-hover: #0044ff;
   --admin-accent-soft: rgba(251, 146, 60, 0.1);
 
 
@@ -166,4 +166,108 @@
   --color-muted: var(--muted);
   --color-border: var(--border);
   --color-border-hover: var(--border-hover);
+}
+
+/* =========================
+   BASE STYLES
+========================= */
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+
+  /* ✅ MAIN FONT */
+  font-family: var(--font-ui), var(--font-primary), sans-serif;
+}
+
+/* =========================
+   TYPOGRAPHY SYSTEM
+========================= */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading), var(--font-primary), sans-serif;
+  letter-spacing: -0.02em;
+}
+
+code,
+pre {
+  font-family: var(--font-code), var(--font-mono), monospace;
+}
+
+/* =========================
+   UTILITY
+========================= */
+
+@utility flex-center {
+  @apply flex items-center justify-center;
+}
+
+@layer utilities {
+  /* =========================
+     BUTTON SYSTEM
+  ========================== */
+
+  .btn {
+    @apply inline-flex items-center justify-center font-medium rounded-lg transition-all cursor-pointer;
+    font-family: var(--font-ui);
+  }
+
+  .btn-primary {
+    @apply text-white px-5 py-3 bg-primary hover:bg-primary-hover active:scale-95;
+  }
+
+  /* =========================
+     CARD
+  ========================== */
+
+  .card {
+    @apply rounded-2xl border border-border bg-background shadow-lg;
+  }
+
+  .dark .card {
+    @apply bg-gray-900 shadow-2xl;
+  }
+
+  /* =========================
+     INPUT FIELD
+  ========================== */
+
+  .input-field {
+    @apply w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-all placeholder-muted focus:border-primary focus:ring-4 focus:ring-primary/20;
+  }
+
+  .input-field.border-red-500 {
+    @apply border-red-500;
+  }
+
+  /* Admin Card with elevation */
+  .admin-card {
+    @apply rounded-xl border border-admin-border bg-admin-card shadow-admin-card;
+  }
+
+  /* Admin Badge System - Now using safe theme tokens */
+  .badge-success {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-500;
+  }
+
+  .badge-error {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-red-500/10 text-red-500;
+  }
+
+  .badge-muted {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-admin-muted/50 text-admin-muted-foreground;
+  }
+
+  .badge-admin-accent {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-admin-accent-soft text-admin-primary;
+  }
+
+  .admin-page-header {
+    @apply flex items-center justify-between mb-6;
+  }
 }

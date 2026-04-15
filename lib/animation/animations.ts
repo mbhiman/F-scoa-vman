@@ -45,7 +45,6 @@ export const staggerContainer: Variants = {
     },
 };
 
-// Floating animations for decorative images
 export const floatAnimation: TargetAndTransition = {
     y: [0, -14, 0],
     transition: { duration: 4, repeat: Infinity, ease: "easeInOut" },
@@ -61,6 +60,11 @@ export const floatAnimationSlow: TargetAndTransition = {
     transition: { duration: 6, repeat: Infinity, ease: "easeInOut", delay: 0.6 },
 };
 
-// Button interactions
-export const buttonHover = { scale: 1.03, transition: { duration: 0.15 } };
-export const buttonTap = { scale: 0.97 };
+export const buttonHover = {
+    scale: 1.03,
+    transition: { duration: 0.15 },
+};
+
+export const buttonTap = {
+    scale: 0.97,
+};
