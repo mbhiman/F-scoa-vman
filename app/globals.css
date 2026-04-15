@@ -1,26 +1,169 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  /* =========================
+     LIGHT THEME
+  ========================== */
 
-@theme inline {
+  --background: #F4F7FC;
+  --foreground: #0f172a;
+
+  --primary: #2463EB;
+  --primary-hover: #1A52CC;
+
+  --secondary: #06B6D4;
+  --secondary-hover: #0891B2;
+
+  --accent: #F5A623;
+  --accent-hover: #D98B10;
+
+  --muted: #64748B;
+  --border: #DDE4EE;
+  --border-hover: #BBC8D8;
+
+  /* ========================= 
+     ADMIN TOKENS 
+  ========================= */
+  --admin-bg: #F8FAFC;
+  --admin-card: #FFFFFF;
+  --admin-sidebar: #FFFFFF;
+  --admin-foreground: #020617;
+  --admin-muted: #64748B;
+  --admin-muted-foreground: #71717a;
+  /* Added this */
+  --admin-border: #E2E8F0;
+
+  --admin-primary: #3852B4;
+  --admin-primary-hover: #ea580c;
+  --admin-accent-soft: rgba(249, 115, 22, 0.1);
+
+  /* =========================
+     🎯 FONT SYSTEM
+  ========================== */
+
+  --font-primary: var(--font-geist-sans);
+  --font-heading: var(--font-sora);
+  --font-ui: var(--font-jakarta);
+  --font-mono: var(--font-geist-mono);
+  --font-code: var(--font-fira-code);
+
+  /* =========================
+     COLOR TOKENS
+  ========================== */
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-hover: var(--secondary-hover);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-border-hover: var(--border-hover);
+}
+
+/* =========================
+   TAILWIND THEME
+========================= */
+
+@theme inline {
+  /* Colors */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-hover: var(--secondary-hover);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-border-hover: var(--border-hover);
+
+  /* Admin Mapping */
+  --color-admin-bg: var(--admin-bg);
+  --color-admin-card: var(--admin-card);
+  --color-admin-sidebar: var(--admin-sidebar);
+  --color-admin-fg: var(--admin-foreground);
+  --color-admin-muted: var(--admin-muted);
+  --color-admin-muted-foreground: var(--admin-muted-foreground);
+  /* Added this */
+  --color-admin-border: var(--admin-border);
+  --color-admin-primary: var(--admin-primary);
+  --color-admin-primary-hover: var(--admin-primary-hover);
+  --color-admin-accent-soft: var(--admin-accent-soft);
+
+  /* Elevation */
+  --shadow-admin-card: 0 4px 12px -2px rgba(0, 0, 0, 0.4);
+
+  /* Fonts */
+  --font-primary: var(--font-geist-sans);
+  --font-heading: var(--font-sora);
+  --font-ui: var(--font-jakarta);
   --font-mono: var(--font-geist-mono);
+  --font-code: var(--font-fira-code);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* =========================
+   DARK THEME
+========================= */
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.dark {
+  --background: #0B1220;
+  --foreground: #E4ECFF;
+
+  --primary: #4080F8;
+  --primary-hover: #5A94FF;
+
+  --secondary: #22D3EE;
+  --secondary-hover: #06B6D4;
+
+  --accent: #FBBF24;
+  --accent-hover: #F59E0B;
+
+  --muted: #8696AA;
+  --border: #1F2937;
+  --border-hover: #284268;
+
+  /* ADMIN DARK  */
+  --admin-bg: #09090b;
+  --admin-card: #121214;
+  --admin-sidebar: #09090b;
+  --admin-foreground: #f8fafc;
+  --admin-muted: #94a3b8 ;
+  --admin-muted-foreground: #94a3b8;
+  /* Added this */
+  --admin-border: #1f1f22;
+
+  --admin-primary: #fb923c;
+  --admin-primary-hover: #f97316;
+  --admin-accent-soft: rgba(251, 146, 60, 0.1);
+
+
+  /* Re-map colors */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-hover: var(--secondary-hover);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-border-hover: var(--border-hover);
 }
