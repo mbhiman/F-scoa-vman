@@ -6,8 +6,8 @@ export default function RegularSignUpPage() {
     <AuthPageShell
       variant="regular"
       title="Join the program"
-      subtitle="Create your regular student account"
-      portalLabel="Regular Student Portal"
+      subtitle="Create your regular learners account"
+      portalLabel="Regular Learners Portal"
     >
       <RegularSignupForm />
     </AuthPageShell>

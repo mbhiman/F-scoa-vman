@@ -4,10 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import InputField from "@/components/auth/fields/input-fields";
+import PolicyConsent from "@/components/auth/forms/policy-consent";
 import {
     staggerContainer,
     slideUp,
@@ -27,6 +28,11 @@ const registerSchema = z
         confirmPassword: z.string(),
         gender: z.enum(["MALE", "FEMALE", "OTHER"]),
         dateOfBirth: z.string().min(1, "Date of birth required"),
+        acceptPolicies: z
+            .boolean()
+            .refine((value) => value === true, {
+                message: "You must accept the Terms & Conditions and Privacy Policy",
+            }),
     })
     .refine((data) => data.password === data.confirmPassword, {
         message: "Passwords do not match",
@@ -109,6 +115,7 @@ export default function RegularSignupForm() {
             confirmPassword: "",
             gender: "MALE",
             dateOfBirth: "",
+            acceptPolicies: false,
         },
     });
 
@@ -129,8 +136,14 @@ export default function RegularSignupForm() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    ...data,
+                    firstName: data.firstName,
+                    lastName: data.lastName,
+                    mobile: data.mobile,
                     email: data.email || null,
+                    password: data.password,
+                    confirmPassword: data.confirmPassword,
+                    gender: data.gender,
+                    dateOfBirth: data.dateOfBirth,
                 }),
             });
 
@@ -290,6 +303,20 @@ export default function RegularSignupForm() {
                     </motion.div>
 
                     <motion.div variants={slideUp}>
+                        <Controller
+                            control={registerForm.control}
+                            name="acceptPolicies"
+                            render={({ field, fieldState }) => (
+                                <PolicyConsent
+                                    checked={!!field.value}
+                                    onChange={field.onChange}
+                                    error={fieldState.error?.message}
+                                />
+                            )}
+                        />
+                    </motion.div>
+
+                    <motion.div variants={slideUp}>
                         <motion.button
                             whileHover={buttonHover}
                             whileTap={buttonTap}
@@ -301,24 +328,10 @@ export default function RegularSignupForm() {
                         </motion.button>
                     </motion.div>
 
-                    <motion.div variants={slideUp}>
-                        <p className="text-center text-xs text-muted">
-                            By registering, you agree to our{" "}
-                            <Link href="#" className="text-primary hover:underline">
-                                Terms
-                            </Link>{" "}
-                            and{" "}
-                            <Link href="#" className="text-primary hover:underline">
-                                Privacy Policy
-                            </Link>
-                            .
-                        </p>
-                    </motion.div>
-
                     <motion.div variants={slideUp} className="text-center">
                         <p className="text-sm text-muted">
                             Already have an account?{" "}
-                            <Link href="/signin/regular" className="font-medium text-primary hover:underline">
+                            <Link href="/signin/regular" className="font-medium text-foreground hover:underline">
                                 Sign in
                             </Link>
                         </p>

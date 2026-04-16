@@ -1,10 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  /* Core */
+  /* Base */
   --background: #F4F7FC;
   --foreground: #0f172a;
 
+  /* Brand */
   --primary: #1642B9;
   --primary-hover: #1A52CC;
 
@@ -14,27 +15,29 @@
   --accent: #F5A623;
   --accent-hover: #D98B10;
 
+  /* Neutral */
   --muted: #64748B;
-
   --border: #DDE4EE;
   --border-hover: #BBC8D8;
 
-  /* Admin */
+  /* =========================
+     ADMIN TOKENS
+  ========================== */
   --admin-bg: #F8FAFC;
   --admin-card: #FFFFFF;
   --admin-sidebar: #FFFFFF;
-
   --admin-foreground: #020617;
   --admin-muted: #64748B;
   --admin-muted-foreground: #71717a;
-
   --admin-border: #E2E8F0;
 
   --admin-primary: #1642B9;
   --admin-primary-hover: #0044ff;
   --admin-accent-soft: rgba(249, 115, 22, 0.1);
 
-  /* Fonts */
+  /* =========================
+     FONTS
+  ========================== */
   --font-primary: var(--font-geist-sans);
   --font-heading: var(--font-sora);
   --font-ui: var(--font-jakarta);
@@ -43,7 +46,7 @@
 }
 
 /* =========================
-   TAILWIND THEME (v4)
+   TAILWIND THEME (V4)
 ========================= */
 
 @theme inline {
@@ -60,7 +63,6 @@
   --color-accent-hover: var(--accent-hover);
 
   --color-muted: var(--muted);
-
   --color-border: var(--border);
   --color-border-hover: var(--border-hover);
 
@@ -68,31 +70,27 @@
   --color-admin-bg: var(--admin-bg);
   --color-admin-card: var(--admin-card);
   --color-admin-sidebar: var(--admin-sidebar);
-
-  --color-admin-foreground: var(--admin-foreground);
+  --color-admin-fg: var(--admin-foreground);
   --color-admin-muted: var(--admin-muted);
   --color-admin-muted-foreground: var(--admin-muted-foreground);
-
   --color-admin-border: var(--admin-border);
-
   --color-admin-primary: var(--admin-primary);
   --color-admin-primary-hover: var(--admin-primary-hover);
-
   --color-admin-accent-soft: var(--admin-accent-soft);
 
-  /* Shadow */
-  --shadow-admin-card: 0 4px 12px -2px rgba(0, 0, 0, 0.4);
+  /* Elevation */
+  --shadow-admin-card: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
 
   /* Fonts */
-  --font-primary: var(--font-primary);
-  --font-heading: var(--font-heading);
-  --font-ui: var(--font-ui);
-  --font-mono: var(--font-mono);
-  --font-code: var(--font-code);
+  --font-primary: var(--font-geist-sans);
+  --font-heading: var(--font-sora);
+  --font-ui: var(--font-jakarta);
+  --font-mono: var(--font-geist-mono);
+  --font-code: var(--font-fira-code);
 }
 
 /* =========================
-   DARK THEME
+   DARK MODE
 ========================= */
 
 .dark {
@@ -109,28 +107,25 @@
   --accent-hover: #F59E0B;
 
   --muted: #8696AA;
-
   --border: #1F2937;
   --border-hover: #284268;
 
-  /* Admin */
+  /* Admin dark */
   --admin-bg: #09090b;
   --admin-card: #121214;
   --admin-sidebar: #09090b;
-
   --admin-foreground: #f8fafc;
   --admin-muted: #94a3b8;
   --admin-muted-foreground: #94a3b8;
-
   --admin-border: #1f1f22;
 
-  --admin-primary: #1642B9;
-  --admin-primary-hover: #0044ff;
+  --admin-primary: #4080F8;
+  --admin-primary-hover: #5A94FF;
   --admin-accent-soft: rgba(251, 146, 60, 0.1);
 }
 
 /* =========================
-   BASE
+   BASE STYLES
 ========================= */
 
 body {
@@ -166,14 +161,13 @@ code, pre {
 
 @layer utilities {
 
-  /* BUTTON */
+  /* BUTTONS */
   .btn {
     @apply inline-flex items-center justify-center rounded-lg font-medium transition-all cursor-pointer;
-    font-family: var(--font-ui);
   }
 
   .btn-primary {
-    @apply px-5 py-3 text-white bg-primary hover:bg-primary-hover active:scale-95;
+    @apply bg-primary text-white px-5 py-3 hover:bg-primary-hover active:scale-95;
   }
 
   /* CARD */
@@ -181,39 +175,103 @@ code, pre {
     @apply rounded-2xl border border-border bg-background shadow-lg;
   }
 
-  .dark .card {
-    @apply bg-gray-900 shadow-2xl;
-  }
-
   /* INPUT */
   .input-field {
     @apply w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-muted focus:border-primary focus:ring-4 focus:ring-primary/20;
   }
 
-  .input-field.border-red-500 {
-    @apply border-red-500;
-  }
-
-  /* ADMIN CARD */
+  /* ADMIN */
   .admin-card {
     @apply rounded-xl border border-admin-border bg-admin-card shadow-admin-card;
   }
 
   /* BADGES */
   .badge-success {
-    @apply inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-500;
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-500;
   }
 
   .badge-error {
-    @apply inline-flex items-center rounded-full bg-red-500/10 px-2 py-0.5 text-[11px] font-medium text-red-500;
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-red-500/10 text-red-500;
   }
 
   .badge-muted {
-    @apply inline-flex items-center rounded-full bg-admin-muted/50 px-2 py-0.5 text-[11px] font-medium text-admin-muted-foreground;
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-muted/30 text-muted;
   }
 
   .badge-admin-accent {
-    @apply inline-flex items-center rounded-full bg-admin-accent-soft px-2 py-0.5 text-[11px] font-medium text-admin-primary;
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-admin-accent-soft text-admin-primary;
   }
 
+  /* =========================
+     LEGAL PAGES
+  ========================== */
+
+  .legal-shell {
+    @apply min-h-screen bg-background text-foreground;
+  }
+
+  .legal-container {
+    @apply mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12;
+  }
+
+  .legal-card {
+    @apply rounded-2xl border border-border bg-background;
+  }
+
+  .legal-header {
+    @apply border-b border-border px-5 py-5 sm:px-8;
+  }
+
+  .legal-body {
+    @apply px-5 py-6 sm:px-8 sm:py-8;
+  }
+
+  .legal-kicker {
+    @apply text-sm font-medium text-muted;
+  }
+
+  .legal-title {
+    @apply mt-2 text-3xl font-bold text-foreground sm:text-4xl;
+  }
+
+  .legal-subtitle {
+    @apply mt-3 max-w-2xl text-sm leading-6 text-muted sm:text-base;
+  }
+
+  .legal-section {
+    @apply border-t border-border pt-6 first:border-t-0 first:pt-0;
+  }
+
+  .legal-section-title {
+    @apply text-xl font-semibold text-foreground sm:text-2xl;
+  }
+
+  .legal-paragraph {
+    @apply mt-3 text-sm leading-7 text-muted sm:text-base;
+  }
+
+  .legal-list {
+    @apply mt-3 list-decimal space-y-2 pl-5 text-sm leading-7 text-muted sm:text-base;
+  }
+
+  .legal-bullet-list {
+    @apply mt-3 list-disc space-y-2 pl-5 text-sm leading-7 text-muted sm:text-base;
+  }
+
+  .legal-link {
+    @apply font-medium text-foreground hover:underline;
+  }
+
+  /* POLICY CHECKBOX */
+  .policy-consent {
+    @apply rounded-xl border border-border bg-background px-4 py-3;
+  }
+
+  .policy-consent-label {
+    @apply text-sm leading-6 text-muted;
+  }
+
+  .policy-checkbox {
+    @apply mt-1 h-4 w-4 rounded border border-border bg-background;
+  }
 }

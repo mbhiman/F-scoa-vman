@@ -7,7 +7,7 @@ export default function RegularSignInPage() {
             variant="regular"
             title="Welcome back"
             subtitle="Sign in to your SCOA learner portal"
-            portalLabel="Regular Student Portal"
+            portalLabel="Regular Learner Portal"
         >
             <RegularLoginForm />
         </AuthPageShell>

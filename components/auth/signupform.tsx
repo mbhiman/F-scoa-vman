@@ -140,7 +140,7 @@ export default function SignUpPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background text-foreground font-ui px-4">
 
-      <div className="w-full max-w-md rounded-2xl border border-border bg-admin-card p-6 sm:p-8 shadow-[var(--shadow-admin-card)]">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-admin-card p-6 sm:p-8 shadow-(--shadow-admin-card)">
 
         {/* HEADER */}
         <div className="mb-6 text-center">

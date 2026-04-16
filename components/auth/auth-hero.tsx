@@ -38,7 +38,7 @@ const heroContent = {
         description:
             "6 days classroom training plus 45 days paid on-the-job training with one of India’s leading e-commerce companies.",
         stats: [
-            { value: "90,000+", label: "Trained Students" },
+            { value: "90,000+", label: "Trained Learners" },
             { value: "51", label: "Cities Covered" },
             { value: "Free", label: "Certification" },
         ],

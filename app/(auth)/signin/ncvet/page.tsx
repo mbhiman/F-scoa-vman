@@ -7,7 +7,7 @@ export default function NcvetSignInPage() {
             variant="ncvet"
             title="Welcome back"
             subtitle="Sign in to your NCVET learner portal"
-            portalLabel="NCVET Student Portal"
+            portalLabel="NCVET Learner Portal"
         >
             <NcvetLoginForm />
         </AuthPageShell>

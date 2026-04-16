@@ -212,7 +212,7 @@ export default function NcvetLoginForm() {
                     <motion.div variants={slideUp} className="text-center">
                         <p className="text-sm text-muted">
                             Don&apos;t have an account?{" "}
-                            <Link href="/signup/ncvet" className="font-medium text-primary hover:underline">
+                            <Link href="/signup/ncvet" className="font-medium text-foreground hover:underline">
                                 Sign up
                             </Link>
                         </p>
