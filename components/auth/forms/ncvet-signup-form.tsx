@@ -132,7 +132,7 @@ export default function NcvetSignupForm() {
         setServerMsg("");
 
         try {
-            const res = await fetch(`${BACKEND_URL}/ncvet/auth/register`, {
+            const res = await fetch(`${BACKEND_URL}/student/auth/register`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -172,7 +172,7 @@ export default function NcvetSignupForm() {
         setServerMsg("");
 
         try {
-            const res = await fetch(`${BACKEND_URL}/ncvet/auth/verify-otp`, {
+            const res = await fetch(`${BACKEND_URL}/student/auth/verify-otp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

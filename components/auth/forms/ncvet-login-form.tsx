@@ -84,7 +84,7 @@ export default function NcvetLoginForm() {
         setMessage("");
 
         try {
-            const res = await fetch(`${BASE_URL}/ncvet/auth/login`, {
+            const res = await fetch(`${BASE_URL}/student/auth/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
@@ -123,7 +123,7 @@ export default function NcvetLoginForm() {
         setMessage("");
 
         try {
-            const res = await fetch(`${BASE_URL}/ncvet/auth/verify-login-otp`, {
+            const res = await fetch(`${BASE_URL}/student/auth/verify-login-otp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
