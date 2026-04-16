@@ -177,7 +177,7 @@ code, pre {
 
   /* INPUT */
   .input-field {
-    @apply w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-muted focus:border-primary focus:ring-4 focus:ring-primary/20;
+    @apply w-full rounded-lg border border-border bg-background py-3 text-sm text-foreground outline-none transition-all placeholder:text-muted focus:border-primary focus:ring-4 focus:ring-primary/20;
   }
 
   /* ADMIN */
