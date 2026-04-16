@@ -29,7 +29,7 @@ const navItems: NavItem[] = [
     icon: <UserPlus className="h-4 w-4" />,
   },
   {
-    href: "/signin/ncvet",
+    href: "/signup/ncvet",
     label: "NCVET Learners",
     description: "NCVET learner access",
     icon: <LogIn className="h-4 w-4" />,
@@ -140,7 +140,7 @@ export default function PublicNavbar() {
         id="public-mobile-menu"
         className={[
           "overflow-hidden border-t border-border bg-background/95 backdrop-blur-xl md:hidden",
-          mobileOpen ? "max-h-[32rem]" : "max-h-0",
+          mobileOpen ? "max-h-128" : "max-h-0",
           "transition-[max-height] duration-300 ease-out",
         ].join(" ")}
       >
