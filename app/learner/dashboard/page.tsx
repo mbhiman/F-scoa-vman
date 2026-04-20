@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { useStudentAuthStore } from "@/store/student-auth-store";
 import ThemeToggle from "@/components/common/theme-toggle";
+import { useStudentAuthStore } from "@/store/student-auth-store";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -44,8 +44,11 @@ function InfoItem({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 export default function LearnerDashboard() {
-  const accessToken = useStudentAuthStore((state) => state.accessToken);
-  const isExpired = useStudentAuthStore((state) => state.isExpired());
+  const accessToken = useStudentAuthStore((s) => s.accessToken);
+  const expiresAt = useStudentAuthStore((s) => s.expiresAt);
+  const callApi = useStudentAuthStore((s) => s.callApi);
+  const isRefreshing = useStudentAuthStore((s) => s.isRefreshing);
+  const isExpired = !expiresAt || Date.now() > expiresAt;
 
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,20 +61,22 @@ export default function LearnerDashboard() {
   }, [profile]);
 
   useEffect(() => {
-    if (!accessToken || isExpired) return;
+    if (!BASE_URL) return;
 
     const fetchProfile = async () => {
       setLoading(true);
       setError("");
 
       try {
-        const res = await fetch(`${BASE_URL}/student/me`, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
+        const res = await callApi("/student/me");
 
         const json: StudentProfileResponse = await res.json();
+
+        if (res.status === 401) {
+          setProfile(null);
+          setError("Session expired. Please sign in again.");
+          return;
+        }
 
         if (!json.success) {
           setError(json.message);
@@ -87,10 +92,20 @@ export default function LearnerDashboard() {
       }
     };
 
-    fetchProfile();
-  }, [accessToken, isExpired]);
+    void fetchProfile();
+  }, [callApi]);
 
   /* ================= STATES ================= */
+
+  if (isRefreshing && !accessToken) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        <div className="card p-6 text-center">
+          <h1 className="text-xl font-bold">Restoring session…</h1>
+        </div>
+      </div>
+    );
+  }
 
   if (!accessToken) {
     return (

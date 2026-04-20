@@ -7,7 +7,6 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useStudentAuthStore } from "@/store/student-auth-store";
 import InputField from "@/components/auth/fields/input-fields";
 import { useDeviceMeta } from "@/hooks/useDeviceMeta";
 import {
@@ -166,12 +165,14 @@ export default function RegularLoginForm() {
                 return;
             }
 
-            localStorage.setItem("accessToken", json.data.access_token);
-            localStorage.setItem("expiresAt", json.data.expires_at);
+            const accessToken: string = json.data.access_token;
+            const expiresInSeconds: number = Number(json.data.expires_in);
+            const expiresAtMs = Date.now() + expiresInSeconds * 1000;
 
-            useStudentAuthStore
-                .getState()
-                .setAccessToken(json.data.access_token, json.data.expires_in);
+            localStorage.setItem("accessToken", accessToken);
+            localStorage.setItem("expiresAt", String(expiresAtMs));
+            // Keep for backward compatibility (optional).
+            localStorage.setItem("expires_in", String(expiresInSeconds));
 
             setMessage("Login successful.");
 
