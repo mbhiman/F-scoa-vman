@@ -19,7 +19,94 @@ import { ReviewAndPublish } from "./steps/6-ReviewAndPublish";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? "";
 const ADMIN_TOKEN_KEY = "adminAccessToken";
-const DEMO_MODE = false; // Switch to false to enable real API calls
+const DEMO_MODE = true; // Switch to false to enable real API calls
+
+type ApiLogMeta = {
+    step: string;
+    path: string;
+    method: string;
+    headers?: Record<string, string>;
+    bodyPreview?: unknown;
+};
+
+type ApiResultLogMeta = {
+    step: string;
+    path: string;
+    method: string;
+    status?: number;
+    ok?: boolean;
+    responsePreview?: unknown;
+    error?: unknown;
+};
+
+const toPlainHeaders = (headers?: HeadersInit): Record<string, string> | undefined => {
+    if (!headers) return undefined;
+    if (headers instanceof Headers) return Object.fromEntries(headers.entries());
+    if (Array.isArray(headers)) return Object.fromEntries(headers);
+    return { ...headers };
+};
+
+const formDataPreview = (fd: FormData) => {
+    const out: Record<string, unknown> = {};
+    for (const [key, value] of fd.entries()) {
+        if (value instanceof File) {
+            out[key] = { fileName: value.name, size: value.size, type: value.type };
+        } else {
+            out[key] = value;
+        }
+    }
+    return out;
+};
+
+const logApiCall = (meta: ApiLogMeta) => {
+    try {
+        const title = `[CourseBuilder API] ${meta.step} → ${meta.method} ${meta.path}`;
+        // eslint-disable-next-line no-console
+        console.groupCollapsed(title);
+        // eslint-disable-next-line no-console
+        console.log("DEMO_MODE:", DEMO_MODE);
+        // eslint-disable-next-line no-console
+        console.log("URL:", `${BASE_URL}${meta.path}`);
+        if (meta.headers) {
+            // eslint-disable-next-line no-console
+            console.log("Headers:", meta.headers);
+        }
+        if (meta.bodyPreview !== undefined) {
+            // eslint-disable-next-line no-console
+            console.log("Body preview:", meta.bodyPreview);
+        }
+        // eslint-disable-next-line no-console
+        console.groupEnd();
+    } catch {
+        // ignore logging failures
+    }
+};
+
+const logApiResult = (meta: ApiResultLogMeta) => {
+    try {
+        const title = `[CourseBuilder API] ${meta.step} ← ${meta.method} ${meta.path}`;
+        // eslint-disable-next-line no-console
+        console.groupCollapsed(title);
+        // eslint-disable-next-line no-console
+        console.log("DEMO_MODE:", DEMO_MODE);
+        if (meta.status !== undefined) {
+            // eslint-disable-next-line no-console
+            console.log("HTTP:", meta.status, meta.ok ? "OK" : "NOT OK");
+        }
+        if (meta.responsePreview !== undefined) {
+            // eslint-disable-next-line no-console
+            console.log("Response preview:", meta.responsePreview);
+        }
+        if (meta.error !== undefined) {
+            // eslint-disable-next-line no-console
+            console.log("Error:", meta.error);
+        }
+        // eslint-disable-next-line no-console
+        console.groupEnd();
+    } catch {
+        // ignore logging failures
+    }
+};
 
 export const authFetch = async (path: string, init: RequestInit = {}) => {
     if (DEMO_MODE) throw new Error("DEMO_MODE is enabled. API calls are disabled.");
@@ -87,97 +174,238 @@ export default function AdminCourseBuilder() {
     const handleBasicInfoSubmit = async (formData: FormData) => {
         setError(""); setSuccess("");
         try {
+            logApiCall({
+                step: "Step 1 Basic Info",
+                path: `/admin/courses`,
+                method: "POST",
+                bodyPreview: formDataPreview(formData),
+            });
             if (DEMO_MODE) {
                 setCourseId(`demo-${Date.now()}`); setStep(2);
                 setSuccess("DEMO: Course created. Continue to enrollment form."); return;
             }
             const res = await authFetch(`/admin/courses`, { method: "POST", body: formData });
             const json = await res.json();
+            logApiResult({
+                step: "Step 1 Basic Info",
+                path: `/admin/courses`,
+                method: "POST",
+                status: res.status,
+                ok: res.ok,
+                responsePreview: json,
+            });
             if (!json.success) throw new Error(json.message);
 
             setCourseId(json.data.id);
             try { router.replace(`/admin/courses/${json.data.id}`); } catch { /* ignore */ }
             setStep(2); setSuccess("Course created. Continue to enrollment.");
-        } catch (e: any) { setError(e?.message ?? "Failed to create course"); }
+        } catch (e: any) {
+            logApiResult({
+                step: "Step 1 Basic Info",
+                path: `/admin/courses`,
+                method: "POST",
+                error: e,
+            });
+            setError(e?.message ?? "Failed to create course");
+        }
     };
 
     const handleEnrollmentSubmit = async (data: any) => {
         setError(""); setSuccess("");
         try {
+            const id = courseId ?? "(missing-course-id)";
+            logApiCall({
+                step: "Step 2 Enrollment Form",
+                path: `/admin/courses/${id}/enrollment-form`,
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                bodyPreview: data,
+            });
             if (DEMO_MODE) { setStep(3); setSuccess("DEMO: Enrollment saved."); return; }
-            const id = requireCourseId();
+            const realId = requireCourseId();
             const res = await authFetch(`/admin/courses/${id}/enrollment-form`, {
                 method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data),
             });
             const json = await res.json();
+            logApiResult({
+                step: "Step 2 Enrollment Form",
+                path: `/admin/courses/${realId}/enrollment-form`,
+                method: "POST",
+                status: res.status,
+                ok: res.ok,
+                responsePreview: json,
+            });
             if (!json.success) throw new Error(json.message);
-            await loadFullCourseData(id);
+            await loadFullCourseData(realId);
             setStep(3); setSuccess("Enrollment form saved.");
-        } catch (e: any) { setError(e?.message ?? "Failed to save enrollment"); }
+        } catch (e: any) {
+            logApiResult({
+                step: "Step 2 Enrollment Form",
+                path: `/admin/courses/${courseId ?? "(missing-course-id)"}/enrollment-form`,
+                method: "POST",
+                error: e,
+            });
+            setError(e?.message ?? "Failed to save enrollment");
+        }
     };
 
     const handleQuizSubmit = async (data: any) => {
         setError(""); setSuccess("");
         try {
+            const id = courseId ?? "(missing-course-id)";
+            logApiCall({
+                step: "Step 3 Quiz",
+                path: `/admin/courses/${id}/quiz`,
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                bodyPreview: data,
+            });
             if (DEMO_MODE) { setStep(4); setSuccess("DEMO: Quiz saved."); return; }
-            const id = requireCourseId();
-            const res = await authFetch(`/admin/courses/${id}/quiz`, {
+            const realId = requireCourseId();
+            const res = await authFetch(`/admin/courses/${realId}/quiz`, {
                 method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data),
             });
             const json = await res.json();
+            logApiResult({
+                step: "Step 3 Quiz",
+                path: `/admin/courses/${realId}/quiz`,
+                method: "POST",
+                status: res.status,
+                ok: res.ok,
+                responsePreview: json,
+            });
             if (!json.success) throw new Error(json.message);
-            await loadFullCourseData(id);
+            await loadFullCourseData(realId);
             setStep(4); setSuccess("Quiz saved.");
-        } catch (e: any) { setError(e?.message ?? "Failed to save quiz"); }
+        } catch (e: any) {
+            logApiResult({
+                step: "Step 3 Quiz",
+                path: `/admin/courses/${courseId ?? "(missing-course-id)"}/quiz`,
+                method: "POST",
+                error: e,
+            });
+            setError(e?.message ?? "Failed to save quiz");
+        }
     };
 
     const handleExamSettingsSubmit = async (data: any) => {
         setError(""); setSuccess("");
         try {
+            const id = courseId ?? "(missing-course-id)";
+            logApiCall({
+                step: "Step 4 Exam Settings",
+                path: `/admin/courses/${id}/exam-settings`,
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                bodyPreview: data,
+            });
             if (DEMO_MODE) { setStep(5); setSuccess("DEMO: Exam settings saved."); return; }
-            const id = requireCourseId();
-            const res = await authFetch(`/admin/courses/${id}/exam-settings`, {
+            const realId = requireCourseId();
+            const res = await authFetch(`/admin/courses/${realId}/exam-settings`, {
                 method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data),
             });
             const json = await res.json();
+            logApiResult({
+                step: "Step 4 Exam Settings",
+                path: `/admin/courses/${realId}/exam-settings`,
+                method: "POST",
+                status: res.status,
+                ok: res.ok,
+                responsePreview: json,
+            });
             if (!json.success) throw new Error(json.message);
-            await loadFullCourseData(id);
+            await loadFullCourseData(realId);
             setStep(5); setSuccess("Exam settings saved.");
-        } catch (e: any) { setError(e?.message ?? "Failed to save exam settings"); }
+        } catch (e: any) {
+            logApiResult({
+                step: "Step 4 Exam Settings",
+                path: `/admin/courses/${courseId ?? "(missing-course-id)"}/exam-settings`,
+                method: "POST",
+                error: e,
+            });
+            setError(e?.message ?? "Failed to save exam settings");
+        }
     };
 
     const handleCertificateSubmit = async (formData: FormData) => {
         setError(""); setSuccess("");
         try {
+            const id = courseId ?? "(missing-course-id)";
+            logApiCall({
+                step: "Step 5 Certificate Upload",
+                path: `/admin/courses/${id}/certificate`,
+                method: "POST",
+                bodyPreview: formDataPreview(formData),
+            });
             if (DEMO_MODE) {
                 setStep(6);
                 await loadFullCourseData(courseId!);
                 setSuccess("DEMO: Certificate uploaded. Ready for review.");
                 return;
             }
-            const id = requireCourseId();
-            const res = await authFetch(`/admin/courses/${id}/certificate`, { method: "POST", body: formData });
+            const realId = requireCourseId();
+            const res = await authFetch(`/admin/courses/${realId}/certificate`, { method: "POST", body: formData });
             const json = await res.json();
+            logApiResult({
+                step: "Step 5 Certificate Upload",
+                path: `/admin/courses/${realId}/certificate`,
+                method: "POST",
+                status: res.status,
+                ok: res.ok,
+                responsePreview: json,
+            });
             if (!json.success) throw new Error(json.message);
 
-            await loadFullCourseData(id); // Load fresh data for Step 6 Review
+            await loadFullCourseData(realId); // Load fresh data for Step 6 Review
             setStep(6); setSuccess("Certificate uploaded. Please review your course.");
-        } catch (e: any) { setError(e?.message ?? "Failed to upload certificate"); }
+        } catch (e: any) {
+            logApiResult({
+                step: "Step 5 Certificate Upload",
+                path: `/admin/courses/${courseId ?? "(missing-course-id)"}/certificate`,
+                method: "POST",
+                error: e,
+            });
+            setError(e?.message ?? "Failed to upload certificate");
+        }
     };
 
     const handlePublish = async () => {
         setError(""); setSuccess("");
         try {
+            const id = courseId ?? "(missing-course-id)";
+            logApiCall({
+                step: "Step 6 Publish",
+                path: `/admin/courses/${id}/status`,
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                bodyPreview: { status: "PUBLISHED" },
+            });
             if (DEMO_MODE) { setSuccess("DEMO: Course published."); return; }
-            const id = requireCourseId();
-            const res = await authFetch(`/admin/courses/${id}/status`, {
+            const realId = requireCourseId();
+            const res = await authFetch(`/admin/courses/${realId}/status`, {
                 method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "PUBLISHED" }),
             });
             const json = await res.json();
+            logApiResult({
+                step: "Step 6 Publish",
+                path: `/admin/courses/${realId}/status`,
+                method: "PATCH",
+                status: res.status,
+                ok: res.ok,
+                responsePreview: json,
+            });
             if (!json.success) throw new Error(json.message);
-            await loadFullCourseData(id);
+            await loadFullCourseData(realId);
             setSuccess("Course published successfully!");
-        } catch (e: any) { setError(e?.message ?? "Failed to publish course"); }
+        } catch (e: any) {
+            logApiResult({
+                step: "Step 6 Publish",
+                path: `/admin/courses/${courseId ?? "(missing-course-id)"}/status`,
+                method: "PATCH",
+                error: e,
+            });
+            setError(e?.message ?? "Failed to publish course");
+        }
     };
 
     return (
