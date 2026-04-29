@@ -6,17 +6,17 @@ import { UploadCloud, ChevronRight } from "lucide-react";
 import { TextInput, TextareaInput, btnPrimaryClass } from "../ui/FormInputs";
 
 const courseBasicSchema = z.object({
-    title: z.string().min(1, "Title is required"),
-    description: z.string().optional(),
-    is_ncvet: z.boolean(),
-    thumbnail: z.any().optional().refine((v) => v == null || v instanceof File, { message: "Must be a file" }),
+    title: z.string().trim().min(1, "Course title is required"),
+    description: z.string().trim().optional(),
+    is_ncvet: z.boolean().default(false),
+    thumbnail: z.any().optional().refine((v) => !v || v instanceof File, { message: "Must be a valid file" }),
 });
 
 type CourseBasicForm = z.infer<typeof courseBasicSchema>;
 
 interface BasicInfoFormProps {
-    initialData?: any; // You can type this properly based on your full GET response
-    onSubmit: (data: FormData) => Promise<void>;
+    initialData?: any;
+    onSubmit: (formData: FormData, rawValues: CourseBasicForm) => Promise<void>;
 }
 
 export function BasicInfoForm({ initialData, onSubmit }: BasicInfoFormProps) {
@@ -28,7 +28,7 @@ export function BasicInfoForm({ initialData, onSubmit }: BasicInfoFormProps) {
         defaultValues: {
             title: initialData?.title || "",
             description: initialData?.description || "",
-            is_ncvet: initialData?.is_ncvet || false,
+            is_ncvet: initialData?.is_ncvet ?? false,
             thumbnail: undefined
         },
     });
@@ -41,7 +41,7 @@ export function BasicInfoForm({ initialData, onSubmit }: BasicInfoFormProps) {
         fd.append("is_ncvet", String(values.is_ncvet));
         if (values.thumbnail instanceof File) fd.append("thumbnail", values.thumbnail);
 
-        await onSubmit(fd);
+        await onSubmit(fd, values);
         setIsSubmitting(false);
     };
 
