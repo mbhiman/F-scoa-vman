@@ -38,11 +38,26 @@ const enrollmentFormSchema = z.object({
     groups: z.array(enrollmentGroupSchema),
     fields: z.array(enrollmentFieldSchema).min(1, "At least 1 field is required"),
 }).superRefine((val, ctx) => {
+    // Prevent API 422 'Duplicate field_key(s)'
+    const keys = val.fields.map(f => f.field_key);
     val.fields.forEach((f, idx) => {
+        if (keys.indexOf(f.field_key) !== idx) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Field Key must be unique",
+                path: ["fields", idx, "field_key"]
+            });
+        }
+
+        // Ensure valid options array for select/radio
         if (f.type === "select" || f.type === "radio") {
             const opts = f.config?.options;
             if (!opts || opts.length < 2) {
-                ctx.addIssue({ code: "custom", message: "Select/Radio must have at least 2 options", path: ["fields", idx, "config", "options"] });
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "Select/Radio must have at least 2 options",
+                    path: ["fields", idx, "config", "options"]
+                });
             }
         }
     });
@@ -164,6 +179,7 @@ export function EnrollmentFormBuilder({ initialData, onSubmit, onBack }: Enrollm
                                     <div>
                                         <label className="text-xs font-medium text-admin-muted-foreground uppercase tracking-wider mb-1 block">Key (API)</label>
                                         <input className={`${baseInputClass} ${form.formState.errors.fields?.[idx]?.field_key ? errorBorderClass : validBorderClass} py-2 font-mono text-xs`} {...form.register(`fields.${idx}.field_key`)} />
+                                        <p className="mt-1 text-xs text-red-500">{form.formState.errors.fields?.[idx]?.field_key?.message}</p>
                                     </div>
                                     <div>
                                         <label className="text-xs font-medium text-admin-muted-foreground uppercase tracking-wider mb-1 block">Input Type</label>
