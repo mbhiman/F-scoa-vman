@@ -5,20 +5,20 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { FileText, Plus, Trash2, ChevronRight } from "lucide-react";
 import { TextInput, baseInputClass, validBorderClass, errorBorderClass, btnPrimaryClass, btnSecondaryClass } from "../ui/FormInputs";
 
+// Fix: Removed .default(0) from sort_order to align strict typing
 const quizOptionSchema = z.object({
     option_text: z.string().trim().min(1, "Required"),
     is_correct: z.boolean(),
-    sort_order: z.number().int().min(0).default(0),
+    sort_order: z.number().int().min(0),
 });
 
 const quizQuestionSchema = z.object({
     question_text: z.string().trim().min(1, "Question text is required"),
-    sort_order: z.number().int().min(0).default(0),
+    sort_order: z.number().int().min(0),
     options: z.array(quizOptionSchema).min(2, "At least 2 options required"),
 }).superRefine((q, ctx) => {
     const correctCount = q.options.filter((o) => o.is_correct).length;
     if (correctCount !== 1) {
-        // Fix: Use literal "custom" instead of deprecated ZodIssueCode.custom
         ctx.addIssue({ code: "custom", message: "Exactly one correct option required", path: ["options"] });
     }
 });
@@ -54,7 +54,6 @@ export function QuizBuilder({ initialData, onSubmit, onBack }: QuizBuilderProps)
 
     const handleSubmit = async (values: QuizFormType) => {
         setIsSubmitting(true);
-        // Map indexes to sort_order before submission to enforce API contract naturally
         const payload = {
             ...values,
             questions: values.questions.map((q, qIdx) => ({

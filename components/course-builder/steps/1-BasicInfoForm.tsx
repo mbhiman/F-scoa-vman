@@ -5,11 +5,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { UploadCloud, ChevronRight } from "lucide-react";
 import { TextInput, TextareaInput, btnPrimaryClass } from "../ui/FormInputs";
 
+// Fix: Removed all .default() and complex .refine() that alter the input/output type footprint
 const courseBasicSchema = z.object({
     title: z.string().trim().min(1, "Course title is required"),
     description: z.string().trim().optional(),
-    is_ncvet: z.boolean().default(false),
-    thumbnail: z.any().optional().refine((v) => !v || v instanceof File, { message: "Must be a valid file" }),
+    is_ncvet: z.boolean(),
+    thumbnail: z.any().optional(),
 });
 
 type CourseBasicForm = z.infer<typeof courseBasicSchema>;
