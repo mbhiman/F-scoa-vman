@@ -39,7 +39,7 @@ export default function AdminCourseBuilder() {
     const loadFullCourseData = async (id: string) => {
         setError(""); setSuccess("");
         try {
-            const res = await adminAuthFetch(`/api/admin/courses/${id}/full`);
+            const res = await adminAuthFetch(`/admin/courses/${id}/full`);
             if (!res.ok) throw new Error(await parseApiError(res));
 
             const json = await res.json();
@@ -71,7 +71,7 @@ export default function AdminCourseBuilder() {
         setError(""); setSuccess("");
         try {
             setDraft("basicInfo", rawValues);
-            const res = await adminAuthFetch(`/api/admin/courses`, { method: "POST", body: formData });
+            const res = await adminAuthFetch(`/admin/courses`, { method: "POST", body: formData });
 
             if (!res.ok) throw new Error(await parseApiError(res));
             const json = await res.json();
@@ -91,7 +91,7 @@ export default function AdminCourseBuilder() {
         try {
             setDraft("enrollmentForm", data);
             const id = requireCourseId();
-            const res = await adminAuthFetch(`/api/admin/courses/${id}/enrollment-form`, {
+            const res = await adminAuthFetch(`/admin/courses/${id}/enrollment-form`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(data),
@@ -111,7 +111,7 @@ export default function AdminCourseBuilder() {
         try {
             setDraft("quiz", data);
             const id = requireCourseId();
-            const res = await adminAuthFetch(`/api/admin/courses/${id}/quiz`, {
+            const res = await adminAuthFetch(`/admin/courses/${id}/quiz`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(data),
@@ -131,7 +131,7 @@ export default function AdminCourseBuilder() {
         try {
             setDraft("examSettings", data);
             const id = requireCourseId();
-            const res = await adminAuthFetch(`/api/admin/courses/${id}/exam-settings`, {
+            const res = await adminAuthFetch(`/admin/courses/${id}/exam-settings`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(data),
@@ -151,7 +151,7 @@ export default function AdminCourseBuilder() {
         try {
             setDraft("certificate", rawValues);
             const id = requireCourseId();
-            const res = await adminAuthFetch(`/api/admin/courses/${id}/certificate`, { method: "POST", body: formData });
+            const res = await adminAuthFetch(`/admin/courses/${id}/certificate`, { method: "POST", body: formData });
 
             if (!res.ok) throw new Error(await parseApiError(res));
 
@@ -168,7 +168,7 @@ export default function AdminCourseBuilder() {
         setError(""); setSuccess("");
         try {
             const id = requireCourseId();
-            const res = await adminAuthFetch(`/api/admin/courses/${id}/status`, {
+            const res = await adminAuthFetch(`/admin/courses/${id}/status`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ status: "PUBLISHED" }),
