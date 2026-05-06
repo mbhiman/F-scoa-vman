@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { LearnerAuth } from "@/lib/learner-auth";
 
 /**
  * Submit a student's enrollment form answers for a course.
@@ -9,7 +10,6 @@ import { useCallback, useMemo, useState } from "react";
  */
 
 const BASE_URL = (process.env.NEXT_PUBLIC_BACKEND_URL ?? "").replace(/\/$/, "");
-const ACCESS_TOKEN_KEY = "accessToken";
 
 export type ValidationError = { field: string; message: string };
 
@@ -20,15 +20,6 @@ type ApiEnvelope<T> = {
   message?: string;
   data?: T;
   error?: { code?: string; details?: ApiErrorDetail[] | Record<string, unknown> | null };
-};
-
-const getAccessToken = () => {
-  if (typeof window === "undefined") return null;
-  try {
-    return localStorage.getItem(ACCESS_TOKEN_KEY);
-  } catch {
-    return null;
-  }
 };
 
 const safeReadJson = async (res: Response): Promise<unknown> => {
@@ -99,7 +90,7 @@ export function useSubmitEnrollment(courseId: string | null | undefined) {
         return;
       }
 
-      const token = getAccessToken();
+      const token = LearnerAuth.getToken();
       if (!token) {
         setLoading(false);
         setError("Authentication token is required.");

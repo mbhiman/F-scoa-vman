@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { LearnerAuth } from "@/lib/learner-auth";
 
 const BASE_URL = (process.env.NEXT_PUBLIC_BACKEND_URL ?? "").replace(/\/$/, "");
 const API_URL = `${BASE_URL}/student/courses`;
-const ACCESS_TOKEN_KEY = "accessToken";
 
 export type Course = {
   id: string;
@@ -46,15 +46,6 @@ type ApiSuccessEnvelope<T> = {
   message: string;
   data: T;
   meta?: PaginationMeta;
-};
-
-const getAccessToken = () => {
-  if (typeof window === "undefined") return null;
-  try {
-    return localStorage.getItem(ACCESS_TOKEN_KEY);
-  } catch {
-    return null;
-  }
 };
 
 const buildQuery = (filters: { page: number; limit: number; search?: string }) => {
@@ -125,7 +116,7 @@ export function useListCourses(filters: { page: number; limit: number; search?: 
 
       try {
         const headers = new Headers();
-        const token = getAccessToken();
+        const token = LearnerAuth.getToken();
         if (token) headers.set("Authorization", `Bearer ${token}`);
 
         const res = await fetch(`${API_URL}?${query}`, { headers, signal });

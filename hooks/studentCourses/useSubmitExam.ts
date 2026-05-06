@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { LearnerAuth } from "@/lib/learner-auth";
 
 /**
  * Submit answers for the student's active exam attempt and receive the score.
@@ -9,7 +10,6 @@ import { useCallback, useMemo, useState } from "react";
  */
 
 const BASE_URL = (process.env.NEXT_PUBLIC_BACKEND_URL ?? "").replace(/\/$/, "");
-const ACCESS_TOKEN_KEY = "accessToken";
 
 export type SubmitExamAnswer = { questionId: string; selectedOptionId: string };
 
@@ -40,15 +40,6 @@ type ApiSubmitExamSuccess = {
   correct_answers: number;
   score: number;
   passed: boolean;
-};
-
-const getAccessToken = () => {
-  if (typeof window === "undefined") return null;
-  try {
-    return localStorage.getItem(ACCESS_TOKEN_KEY);
-  } catch {
-    return null;
-  }
 };
 
 const safeReadJson = async (res: Response): Promise<unknown> => {
@@ -131,7 +122,7 @@ export function useSubmitExam(courseId: string | null | undefined) {
         return;
       }
 
-      const token = getAccessToken();
+      const token = LearnerAuth.getToken();
       if (!token) {
         setLoading(false);
         setError("Authentication token is required.");

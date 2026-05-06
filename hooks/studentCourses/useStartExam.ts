@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { LearnerAuth } from "@/lib/learner-auth";
 
 /**
  * Start or resume an exam attempt for a course.
@@ -9,7 +10,6 @@ import { useCallback, useMemo, useState } from "react";
  */
 
 const BASE_URL = (process.env.NEXT_PUBLIC_BACKEND_URL ?? "").replace(/\/$/, "");
-const ACCESS_TOKEN_KEY = "accessToken";
 
 export type StartExamStatus = "IN_PROGRESS" | "SUBMITTED" | "TIMED_OUT";
 
@@ -31,15 +31,6 @@ type ApiStartExamSuccess = {
   status: StartExamStatus;
   started_at: string;
   expires_at: string;
-};
-
-const getAccessToken = () => {
-  if (typeof window === "undefined") return null;
-  try {
-    return localStorage.getItem(ACCESS_TOKEN_KEY);
-  } catch {
-    return null;
-  }
 };
 
 const safeReadJson = async (res: Response): Promise<unknown> => {
@@ -128,7 +119,7 @@ export function useStartExam(courseId: string | null | undefined) {
       return;
     }
 
-    const token = getAccessToken();
+    const token = LearnerAuth.getToken();
     if (!token) {
       setLoading(false);
       setError("Authentication token is required.");

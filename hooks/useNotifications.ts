@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AdminAuth } from "@/lib/admin-auth";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? "";
-const ADMIN_TOKEN_KEY = "adminAccessToken";
 
 export type NotificationChannel = "EMAIL" | "WHATSAPP" | "SMS";
 export type NotificationStatus = "PENDING" | "SENT" | "FAILED";
@@ -51,9 +51,7 @@ export type PaginationMeta = {
 const clearAdminSessionAndRedirect = () => {
   if (typeof window === "undefined") return;
   try {
-    localStorage.removeItem(ADMIN_TOKEN_KEY);
-    localStorage.removeItem("adminExpiresIn");
-    localStorage.removeItem("adminExpiresAt");
+    AdminAuth.clear();
   } catch {
     // ignore storage failures
   }
@@ -69,7 +67,7 @@ const clearAdminSessionAndRedirect = () => {
 const buildAdminAuthHeaders = () => {
   const headers = new Headers();
   if (typeof window === "undefined") return headers;
-  const token = localStorage.getItem(ADMIN_TOKEN_KEY);
+  const token = AdminAuth.getToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
   return headers;
 };

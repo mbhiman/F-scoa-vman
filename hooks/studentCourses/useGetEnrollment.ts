@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { LearnerAuth } from "@/lib/learner-auth";
 
 /**
  * Fetch the student's submitted enrollment (with answers) for a course.
@@ -9,7 +10,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
  */
 
 const BASE_URL = (process.env.NEXT_PUBLIC_BACKEND_URL ?? "").replace(/\/$/, "");
-const ACCESS_TOKEN_KEY = "accessToken";
 
 export type Enrollment = {
   id: string;
@@ -96,15 +96,6 @@ type ApiEnrollmentResponse = {
   ungrouped_fields: ApiEnrollmentField[];
 };
 
-const getAccessToken = () => {
-  if (typeof window === "undefined") return null;
-  try {
-    return localStorage.getItem(ACCESS_TOKEN_KEY);
-  } catch {
-    return null;
-  }
-};
-
 const safeReadJson = async (res: Response): Promise<unknown> => {
   try {
     return await res.json();
@@ -175,7 +166,7 @@ export function useGetEnrollment(courseId: string | null | undefined) {
         return;
       }
 
-      const token = getAccessToken();
+      const token = LearnerAuth.getToken();
       if (!token) {
         setEnrollment(null);
         setForm(null);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { LearnerAuth } from "@/lib/learner-auth";
 
 /**
  * Fetch a student's course entry details for learner flow navigation.
@@ -9,7 +10,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
  */
 
 const BASE_URL = (process.env.NEXT_PUBLIC_BACKEND_URL ?? "").replace(/\/$/, "");
-const ACCESS_TOKEN_KEY = "accessToken";
 
 export type CourseEntryCourse = {
   id: string;
@@ -60,15 +60,6 @@ type ApiCourseEntryResponse = {
       }
     | null;
   next_step: CourseEntryNextStep;
-};
-
-const getAccessToken = () => {
-  if (typeof window === "undefined") return null;
-  try {
-    return localStorage.getItem(ACCESS_TOKEN_KEY);
-  } catch {
-    return null;
-  }
 };
 
 const safeReadJson = async (res: Response): Promise<unknown> => {
@@ -151,7 +142,7 @@ export function useGetCourseEntry(courseId: string | null | undefined) {
         return;
       }
 
-      const token = getAccessToken();
+      const token = LearnerAuth.getToken();
       if (!token) {
         setCourse(null);
         setEnrollment(null);

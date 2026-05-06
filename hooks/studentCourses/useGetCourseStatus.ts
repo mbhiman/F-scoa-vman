@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { LearnerAuth } from "@/lib/learner-auth";
 
 /**
  * Lightweight polling endpoint for enrollment + attempt state + next step hint.
@@ -9,7 +10,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
  */
 
 const BASE_URL = (process.env.NEXT_PUBLIC_BACKEND_URL ?? "").replace(/\/$/, "");
-const ACCESS_TOKEN_KEY = "accessToken";
 
 export type CourseStatusNextStep = "ENROLL" | "START" | "RESUME" | "RESULT";
 
@@ -51,15 +51,6 @@ type ApiCourseStatusResponse = {
   is_enrolled: boolean;
   attempt: ApiStatusAttempt;
   next_step: CourseStatusNextStep;
-};
-
-const getAccessToken = () => {
-  if (typeof window === "undefined") return null;
-  try {
-    return localStorage.getItem(ACCESS_TOKEN_KEY);
-  } catch {
-    return null;
-  }
 };
 
 const safeReadJson = async (res: Response): Promise<unknown> => {
@@ -133,7 +124,7 @@ export function useGetCourseStatus(courseId: string | null | undefined) {
       return;
     }
 
-    const token = getAccessToken();
+    const token = LearnerAuth.getToken();
     if (!token) {
       setCourseIdValue(null);
       setIsEnrolled(null);
