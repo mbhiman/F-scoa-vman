@@ -13,8 +13,41 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { adminAuthFetch, parseApiError } from "@/lib/admin-api";
+
+type AdminProfile = {
+    id: string;
+    name: string;
+    email: string;
+    isActive: boolean;
+    isVerified: boolean;
+    lastLoginAt: string | null;
+    createdAt: string;
+};
+
+const ADMIN_TOKEN_KEY = "adminAccessToken";
+
+function initialsFromName(name?: string) {
+    const safe = (name ?? "").trim();
+    if (!safe) return "AD";
+    const parts = safe.split(/\s+/).filter(Boolean);
+    const first = parts[0]?.[0] ?? "";
+    const last = parts.length > 1 ? parts[parts.length - 1]?.[0] ?? "" : "";
+    return (first + last).toUpperCase() || "AD";
+}
+
+function clearAdminSession() {
+    if (typeof window === "undefined") return;
+    try {
+        localStorage.removeItem(ADMIN_TOKEN_KEY);
+        localStorage.removeItem("adminExpiresIn");
+        localStorage.removeItem("adminExpiresAt");
+    } catch {
+        // ignore storage failures
+    }
+}
 
 const routeLabels: Record<string, string> = {
     "/admin/dashboard": "Dashboard",
@@ -37,15 +70,95 @@ export function AdminTopNav() {
     const [mounted, setMounted] = useState(false);
     const [notifOpen, setNotifOpen] = useState(false);
     const [userOpen, setUserOpen] = useState(false);
+    const [profile, setProfile] = useState<AdminProfile | null>(null);
+    const [profileLoading, setProfileLoading] = useState(false);
+    const userMenuCloseTimerRef = useRef<number | null>(null);
 
     useEffect(() => {
         setMounted(true);
+    }, []);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const token = localStorage.getItem(ADMIN_TOKEN_KEY);
+        if (!token) {
+            setProfile(null);
+            return;
+        }
+
+        const controller = new AbortController();
+
+        const run = async () => {
+            try {
+                setProfileLoading(true);
+                const res = await adminAuthFetch("/admin/me", { signal: controller.signal });
+                const json = await res.json().catch(() => null);
+
+                if (!res.ok || !json?.success) {
+                    const message = await parseApiError(res);
+                    throw new Error(message || "Failed to fetch admin profile.");
+                }
+
+                setProfile(json.data as AdminProfile);
+            } catch (err) {
+                if (err instanceof DOMException && err.name === "AbortError") return;
+
+                clearAdminSession();
+                setProfile(null);
+
+                try {
+                    window.location.assign("/signin/admin");
+                } catch {
+                    // ignore redirect failures
+                }
+            } finally {
+                setProfileLoading(false);
+            }
+        };
+
+        void run();
+        return () => controller.abort();
     }, []);
 
     const currentLabel =
         Object.entries(routeLabels).find(([key]) =>
             pathname.startsWith(key)
         )?.[1] ?? "Admin";
+
+    const displayName = profile?.name || "Admin";
+    const displayEmail = profile?.email || "—";
+    const avatarText = initialsFromName(profile?.name);
+
+    const cancelUserMenuClose = () => {
+        if (userMenuCloseTimerRef.current === null) return;
+        window.clearTimeout(userMenuCloseTimerRef.current);
+        userMenuCloseTimerRef.current = null;
+    };
+
+    const scheduleUserMenuClose = (delayMs: number) => {
+        cancelUserMenuClose();
+        userMenuCloseTimerRef.current = window.setTimeout(() => {
+            setUserOpen(false);
+            userMenuCloseTimerRef.current = null;
+        }, delayMs);
+    };
+
+    useEffect(() => {
+        return () => cancelUserMenuClose();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const handleSignOut = () => {
+        cancelUserMenuClose();
+        setUserOpen(false);
+        setNotifOpen(false);
+        clearAdminSession();
+        try {
+            window.location.assign("/signin/admin");
+        } catch {
+            // ignore redirect failures
+        }
+    };
 
     return (
         <header className="flex items-center justify-between h-16 px-4 md:px-6 border-b shrink-0 bg-admin-bg border-admin-border">
@@ -99,17 +212,24 @@ export function AdminTopNav() {
                 </button>
 
                 {/* User */}
-                <div className="relative ml-1">
+                <div
+                    className="relative ml-1"
+                    onMouseEnter={() => {
+                        cancelUserMenuClose();
+                        setUserOpen(true);
+                    }}
+                    onMouseLeave={() => scheduleUserMenuClose(1000)}
+                >
                     <button
                         onClick={() => setUserOpen(!userOpen)}
                         className="flex items-center gap-2 p-1 md:pl-2 md:pr-3 md:py-1.5 rounded-md border border-transparent md:border-admin-border hover:bg-admin-primary/10 transition-colors"
                     >
                         <div className="w-7 h-7 md:w-6 md:h-6 rounded-full flex items-center justify-center text-[10px] md:text-xs font-bold text-white bg-admin-primary">
-                            SA
+                            {avatarText}
                         </div>
 
                         <span className="hidden lg:inline text-sm font-medium text-admin-foreground">
-                            Super Admin
+                            {profileLoading ? "Loading…" : displayName}
                         </span>
 
                         <ChevronDown className="hidden sm:inline w-3.5 h-3.5 text-admin-muted-foreground" />
@@ -119,10 +239,10 @@ export function AdminTopNav() {
                         <div className="absolute right-0 top-12 w-56 rounded-xl border shadow-xl z-50 py-1 bg-admin-bg border-admin-border">
                             <div className="px-4 py-3 border-b border-admin-border">
                                 <p className="text-sm font-medium text-admin-foreground">
-                                    Super Admin
+                                    {profileLoading ? "Loading…" : displayName}
                                 </p>
                                 <p className="text-xs text-admin-muted-foreground">
-                                    admin@scoa.com
+                                    {displayEmail}
                                 </p>
                             </div>
 
@@ -147,7 +267,11 @@ export function AdminTopNav() {
                             </div>
 
                             <div className="border-t mt-1 pt-1 border-admin-border">
-                                <button className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-500/10">
+                                <button
+                                    type="button"
+                                    onClick={handleSignOut}
+                                    className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-500/10"
+                                >
                                     <LogOut className="w-4 h-4" />
                                     Sign Out
                                 </button>
