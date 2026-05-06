@@ -6,7 +6,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? "";
 const ADMIN_TOKEN_KEY = "adminAccessToken";
 
 export type NotificationChannel = "EMAIL" | "WHATSAPP" | "SMS";
-export type NotificationStatus = "PENDING" | "SENT" | "FAILED";
+export type NotificationStatus = "PENDING" | "SENT" | "FAILED" | "SCHEDULED";
 export type NotificationTemplate = "otp" | "welcome" | "resetPassword";
 
 export type Notification = {

@@ -30,6 +30,10 @@ const statusMeta = {
     icon: Clock,
     className: "bg-amber-500/10 text-amber-500",
   },
+  SCHEDULED: {
+    icon: CalendarClock,
+    className: "bg-sky-500/10 text-sky-600 dark:text-sky-400",
+  },
 };
 
 const formatDate = (value?: string | null) => {
@@ -74,7 +78,11 @@ export default function NotificationDetailModal({ id, onClose }: Props) {
   }, [id]);
 
   const ChannelIcon = data ? channelIcons[data.channel] : Mail;
-  const StatusIcon = data ? statusMeta[data.status].icon : Clock;
+  const statusEntry =
+    data && data.status in statusMeta
+      ? statusMeta[data.status as keyof typeof statusMeta]
+      : { icon: Clock, className: "bg-admin-primary/10 text-admin-primary" };
+  const StatusIcon = data ? statusEntry.icon : Clock;
 
   return (
     <AnimatePresence>
@@ -113,9 +121,21 @@ export default function NotificationDetailModal({ id, onClose }: Props) {
 
             <div className="max-h-[calc(90vh-86px)] overflow-y-auto p-5">
               {loading ? (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {Array.from({ length: 6 }).map((_, index) => (
-                    <div key={index} className="h-16 animate-pulse rounded-xl bg-admin-primary/5" />
+                    <div key={index} className="relative h-16 overflow-hidden rounded-xl bg-admin-primary/[0.07]">
+                      <motion.div
+                        className="absolute inset-0 bg-linear-to-r from-transparent via-admin-card/90 to-transparent dark:via-white/10"
+                        initial={{ x: "-120%" }}
+                        animate={{ x: "120%" }}
+                        transition={{
+                          duration: 1.35,
+                          repeat: Infinity,
+                          ease: "linear",
+                          delay: index * 0.05,
+                        }}
+                      />
+                    </div>
                   ))}
                 </div>
               ) : error ? (
@@ -129,7 +149,7 @@ export default function NotificationDetailModal({ id, onClose }: Props) {
                       <ChannelIcon className="h-4 w-4" />
                       {data.channel}
                     </span>
-                    <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold ${statusMeta[data.status].className}`}>
+                    <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold ${statusEntry.className}`}>
                       <StatusIcon className="h-4 w-4" />
                       {data.status}
                     </span>
