@@ -6,29 +6,35 @@ import { Award, Check, ChevronRight } from "lucide-react";
 import { btnPrimaryClass, btnSecondaryClass } from "../ui/FormInputs";
 
 const certificateSchema = z.object({
-    template: z.any().refine((v) => v instanceof File, { message: "Template image is required" }),
+    template: z.any().refine((v) => !v || v instanceof File || typeof v === 'string', { message: "Template image is required" }),
 });
 
 type CertificateFormType = z.infer<typeof certificateSchema>;
 
 interface CertificateUploadProps {
-    onSubmit: (data: FormData) => Promise<void>;
+    initialData?: any;
+    onSubmit: (formData: FormData, rawValues: CertificateFormType) => Promise<void>;
     onBack: () => void;
 }
 
-export function CertificateUpload({ onSubmit, onBack }: CertificateUploadProps) {
+export function CertificateUpload({ initialData, onSubmit, onBack }: CertificateUploadProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const form = useForm<CertificateFormType>({
         resolver: zodResolver(certificateSchema),
         mode: "onChange",
+        defaultValues: {
+            template: initialData?.template || initialData?.templateUrl || undefined
+        }
     });
 
     const handleSubmit = async (values: CertificateFormType) => {
         setIsSubmitting(true);
         const fd = new FormData();
-        fd.append("template", values.template as File);
-        await onSubmit(fd);
+        if (values.template instanceof File) {
+            fd.append("template", values.template);
+        }
+        await onSubmit(fd, values);
         setIsSubmitting(false);
     };
 
@@ -53,7 +59,7 @@ export function CertificateUpload({ onSubmit, onBack }: CertificateUploadProps) 
                                     </p>
                                     {field.value && (
                                         <p className="mt-2 text-xs font-semibold text-emerald-500 flex items-center">
-                                            <Check className="w-3 h-3 mr-1" /> File Attached: {(field.value as File).name}
+                                            <Check className="w-3 h-3 mr-1" /> File Attached: {field.value instanceof File ? field.value.name : 'Existing Template'}
                                         </p>
                                     )}
                                 </div>

@@ -4,7 +4,7 @@ import { btnPrimaryClass, btnSecondaryClass } from "../ui/FormInputs";
 
 interface ReviewAndPublishProps {
     courseId: string;
-    reviewData: any;
+    reviewData: any; // Mapped to our Zustand drafts object
     onLoadData: () => Promise<void>;
     onPublish: () => Promise<void>;
     onBack: () => void;
@@ -54,7 +54,7 @@ export function ReviewAndPublish({ courseId, reviewData, onLoadData, onPublish, 
                 <div className="grid gap-6 md:grid-cols-2">
                     <div className="rounded-xl border border-admin-border bg-admin-bg overflow-hidden flex flex-col">
                         <div className="px-4 py-3 bg-admin-muted/10 border-b border-admin-border font-semibold text-sm text-admin-fg">1. Basic Info</div>
-                        <pre className="p-4 text-xs font-mono text-admin-muted-foreground overflow-auto flex-1 max-h-48">{JSON.stringify(reviewData.course, null, 2)}</pre>
+                        <pre className="p-4 text-xs font-mono text-admin-muted-foreground overflow-auto flex-1 max-h-48">{JSON.stringify(reviewData.basicInfo, null, 2)}</pre>
                     </div>
                     <div className="rounded-xl border border-admin-border bg-admin-bg overflow-hidden flex flex-col">
                         <div className="px-4 py-3 bg-admin-muted/10 border-b border-admin-border font-semibold text-sm text-admin-fg">2. Enrollment Data</div>

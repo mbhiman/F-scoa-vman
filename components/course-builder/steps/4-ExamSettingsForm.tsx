@@ -5,10 +5,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronRight } from "lucide-react";
 import { TextInput, btnPrimaryClass, btnSecondaryClass } from "../ui/FormInputs";
 
+// Strictly aligned with API Contract 3.7
 const examSettingsSchema = z.object({
     duration_minutes: z.number().int().min(1, "Min 1 minute"),
     passing_percentage: z.number().min(0).max(100, "0 to 100"),
     max_attempts: z.number().int().min(1, "Min 1 attempt"),
+    cooldown_hours: z.number().int().min(0, "Min 0 hours"),
 });
 
 type ExamSettingsFormType = z.infer<typeof examSettingsSchema>;
@@ -29,6 +31,7 @@ export function ExamSettingsForm({ initialData, onSubmit, onBack }: ExamSettings
             duration_minutes: initialData?.duration_minutes ?? 60,
             passing_percentage: initialData?.passing_percentage ?? 70,
             max_attempts: initialData?.max_attempts ?? 1,
+            cooldown_hours: initialData?.cooldown_hours ?? 720, // Contract defaults to 30 days (720h)
         },
     });
 
@@ -42,10 +45,10 @@ export function ExamSettingsForm({ initialData, onSubmit, onBack }: ExamSettings
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 admin-card p-6 md:p-8">
             <div className="border-b border-admin-border pb-4">
                 <h2 className="text-lg font-semibold text-admin-fg">Exam Parameters</h2>
-                <p className="text-sm text-admin-muted-foreground mt-1">Configure grading and attempt limits.</p>
+                <p className="text-sm text-admin-muted-foreground mt-1">Configure grading, attempt limits, and cooldowns.</p>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                 <TextInput
                     type="number"
                     label="Time Limit (mins) *"
@@ -63,6 +66,12 @@ export function ExamSettingsForm({ initialData, onSubmit, onBack }: ExamSettings
                     label="Max Retries *"
                     error={form.formState.errors.max_attempts?.message}
                     {...form.register("max_attempts", { valueAsNumber: true })}
+                />
+                <TextInput
+                    type="number"
+                    label="Cooldown (hours)"
+                    error={form.formState.errors.cooldown_hours?.message}
+                    {...form.register("cooldown_hours", { valueAsNumber: true })}
                 />
             </div>
 

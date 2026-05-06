@@ -5,14 +5,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { FileText, Plus, Trash2, ChevronRight } from "lucide-react";
 import { TextInput, baseInputClass, validBorderClass, errorBorderClass, btnPrimaryClass, btnSecondaryClass } from "../ui/FormInputs";
 
+// Fix: Removed .default(0) from sort_order to align strict typing
 const quizOptionSchema = z.object({
-    option_text: z.string().min(1, "Required"),
+    option_text: z.string().trim().min(1, "Required"),
     is_correct: z.boolean(),
     sort_order: z.number().int().min(0),
 });
 
 const quizQuestionSchema = z.object({
-    question_text: z.string().min(1, "Question text is required"),
+    question_text: z.string().trim().min(1, "Question text is required"),
     sort_order: z.number().int().min(0),
     options: z.array(quizOptionSchema).min(2, "At least 2 options required"),
 }).superRefine((q, ctx) => {
@@ -23,7 +24,7 @@ const quizQuestionSchema = z.object({
 });
 
 const quizSchema = z.object({
-    title: z.string().optional(),
+    title: z.string().trim().optional(),
     questions: z.array(quizQuestionSchema).min(1, "At least 1 question required"),
 });
 
@@ -53,7 +54,15 @@ export function QuizBuilder({ initialData, onSubmit, onBack }: QuizBuilderProps)
 
     const handleSubmit = async (values: QuizFormType) => {
         setIsSubmitting(true);
-        await onSubmit(values);
+        const payload = {
+            ...values,
+            questions: values.questions.map((q, qIdx) => ({
+                ...q,
+                sort_order: qIdx,
+                options: q.options.map((o, oIdx) => ({ ...o, sort_order: oIdx }))
+            }))
+        };
+        await onSubmit(payload);
         setIsSubmitting(false);
     };
 
@@ -130,7 +139,7 @@ export function QuizBuilder({ initialData, onSubmit, onBack }: QuizBuilderProps)
                                             <button type="button" disabled={options.length <= 2} className="p-2 text-admin-muted-foreground hover:text-red-500 disabled:opacity-30" onClick={() => {
                                                 const next = [...options];
                                                 next.splice(oIdx, 1);
-                                                if (!next.some(x => x.is_correct) && next.length > 0) next[0].is_correct = true; // Auto-assign correct if deleted
+                                                if (!next.some(x => x.is_correct) && next.length > 0) next[0].is_correct = true;
                                                 form.setValue(optionsPath, next, { shouldValidate: true });
                                             }}>
                                                 <Trash2 className="w-4 h-4" />
