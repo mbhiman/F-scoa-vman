@@ -221,7 +221,6 @@ export default function NotificationFilters({ filters, onChange, onReset }: Prop
                   | "SENT"
                   | "FAILED"
                   | "PENDING"
-                 
               }
               onChange={(v) => updateFilter("status", v)}
               options={[
@@ -229,7 +228,6 @@ export default function NotificationFilters({ filters, onChange, onReset }: Prop
                 { value: "SENT", label: "Sent" },
                 { value: "FAILED", label: "Failed" },
                 { value: "PENDING", label: "Pending" },
-               
               ]}
             />
           </div>

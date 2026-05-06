@@ -30,10 +30,6 @@ const statusMeta = {
     icon: Clock,
     className: "bg-amber-500/10 text-amber-500",
   },
-  SCHEDULED: {
-    icon: CalendarClock,
-    className: "bg-sky-500/10 text-sky-600 dark:text-sky-400",
-  },
 };
 
 const formatDate = (value?: string | null) => {

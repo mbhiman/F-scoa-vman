@@ -20,11 +20,6 @@ const STATUS_STYLES: Record<
     className:
       "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-400",
   },
-  SCHEDULED: {
-    label: "Scheduled",
-    className:
-      "border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-400",
-  },
 };
 
 type Props = {

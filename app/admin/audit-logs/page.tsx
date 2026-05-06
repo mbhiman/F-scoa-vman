@@ -4,7 +4,6 @@ import { useState } from "react";
 import type { ComponentType } from "react";
 import {
   BellRing,
-  CalendarClock,
   CheckCircle2,
   Clock,
   RefreshCcw,
@@ -39,7 +38,6 @@ export default function NotificationsPage() {
   const delivered = data.filter((item) => item.status === "SENT").length;
   const failed = data.filter((item) => item.status === "FAILED").length;
   const pending = data.filter((item) => item.status === "PENDING").length;
-  const scheduled = data.filter((item) => item.status === "SCHEDULED").length;
 
   const setPage = (page: number) => {
     setFilters((current) => ({ ...current, page }));
@@ -87,12 +85,11 @@ export default function NotificationsPage() {
           </motion.button>
         </div>
 
-        <div className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard icon={BellRing} label="Loaded (page)" value={data.length} />
           <StatCard icon={CheckCircle2} label="Sent" value={delivered} tone="success" />
           <StatCard icon={TriangleAlert} label="Failed" value={failed} tone="danger" />
           <StatCard icon={Clock} label="Pending" value={pending} tone="warning" />
-          <StatCard icon={CalendarClock} label="Scheduled" value={scheduled} tone="info" />
         </div>
       </motion.section>
 
