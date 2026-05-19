@@ -145,7 +145,6 @@ export function AdminTopNav() {
 
     // --- Hover Logic Functions ---
     const handleMouseEnter = () => {
-        // If the user enters the wrapper, cancel any pending close timer and open the menu
         if (hoverTimeoutRef.current !== null) {
             window.clearTimeout(hoverTimeoutRef.current);
             hoverTimeoutRef.current = null;
@@ -154,8 +153,6 @@ export function AdminTopNav() {
     };
 
     const handleMouseLeave = () => {
-        // When the user leaves the wrapper, wait 250ms before closing.
-        // This gives them time to move the mouse across the gap into the dropdown menu.
         hoverTimeoutRef.current = window.setTimeout(() => {
             setUserOpen(false);
             hoverTimeoutRef.current = null;
@@ -182,7 +179,7 @@ export function AdminTopNav() {
                     onClick={toggleSidebar}
                     className="p-2 -ml-2 md:hidden text-admin-muted-foreground hover:text-admin-fg hover:bg-admin-muted/10 rounded-md transition-colors"
                 >
-                    {sidebarCollapsed ? <Menu className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
+                    {sidebarCollapsed ? <PanelLeftClose className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                 </button>
 
                 <div className="flex items-center gap-2 overflow-hidden">
