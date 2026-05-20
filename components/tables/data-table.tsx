@@ -12,13 +12,117 @@ import {
     type ColumnFiltersState,
     type VisibilityState,
 } from "@tanstack/react-table";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
     ChevronUp, ChevronDown, ChevronsUpDown,
     ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
     Search, SlidersHorizontal, X
 } from "lucide-react";
 
+// --- Custom Animated Dropdown adapted for Admin UI ---
+function AdminFancyDropdown({
+    ariaLabel,
+    value,
+    onChange,
+    options,
+    placeholder = "Select...",
+}: {
+    ariaLabel: string;
+    value: string;
+    onChange: (v: string) => void;
+    options: { value: string; label: string }[];
+    placeholder?: string;
+}) {
+    const [open, setOpen] = useState(false);
+    const rootRef = useRef<HTMLDivElement>(null);
+    const active = options.find((o) => o.value === value) ?? { label: placeholder, value: "" };
+
+    useEffect(() => {
+        const listener = (event: MouseEvent | TouchEvent) => {
+            if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+        };
+        document.addEventListener("mousedown", listener);
+        document.addEventListener("touchstart", listener, { passive: true });
+        return () => {
+            document.removeEventListener("mousedown", listener);
+            document.removeEventListener("touchstart", listener);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!open) return;
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") setOpen(false);
+        };
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+    }, [open]);
+
+    return (
+        <div ref={rootRef} className="relative w-full">
+            <motion.button
+                type="button"
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setOpen((v) => !v)}
+                aria-label={ariaLabel}
+                aria-haspopup="listbox"
+                aria-expanded={open}
+                className={`group flex h-10 w-full items-center justify-between gap-3 rounded-lg border bg-admin-card px-3 text-left transition-[border-color,box-shadow,background-color] duration-200 border-admin-border shadow-sm hover:border-admin-primary/50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-admin-primary/20 ${open ? "border-admin-primary shadow-md ring-2 ring-admin-primary/15" : ""}`}
+            >
+                <span className={`truncate text-[13px] font-medium ${value ? "text-admin-fg" : "text-admin-muted-foreground"}`}>
+                    {active.label}
+                </span>
+                <span className="flex items-center text-admin-muted-foreground transition-colors group-hover:text-admin-fg">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`}>
+                        <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                </span>
+            </motion.button>
+
+            <AnimatePresence>
+                {open && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 6, scale: 0.985 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 4, scale: 0.985 }}
+                        transition={{ duration: 0.17, ease: [0.25, 0.46, 0.45, 0.94] }}
+                        className="absolute left-0 right-0 z-50 mt-1.5 w-full origin-top overflow-hidden rounded-xl border border-admin-border bg-admin-card/95 shadow-[0_22px_48px_-20px_rgba(0,0,0,0.38)] backdrop-blur-md"
+                        role="listbox"
+                    >
+                        <div className="max-h-60 overflow-auto p-1.5 custom-scrollbar">
+                            {options.map((opt) => {
+                                const selected = opt.value === value;
+                                return (
+                                    <button
+                                        key={opt.value || "__all"}
+                                        type="button"
+                                        role="option"
+                                        aria-selected={selected}
+                                        onClick={() => { onChange(opt.value); setOpen(false); }}
+                                        className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-[13px] transition-[background-color,color,transform] duration-150 hover:bg-admin-primary/10 hover:text-admin-fg active:scale-[0.99] ${selected ? "bg-admin-primary/10 font-semibold text-admin-primary" : "text-admin-fg"}`}
+                                    >
+                                        <span className="truncate">{opt.label}</span>
+                                        {selected && (
+                                            <span className="text-admin-primary">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                    <path d="M20 6 9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
+
+// --- Main Data Table Component ---
 interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[];
     data: TData[];
@@ -64,12 +168,10 @@ export function DataTable<TData, TValue>({
     });
 
     const selectedCount = Object.keys(rowSelection).length;
-
-    // Helper to count active column filters (excluding the main search key)
     const activeFiltersCount = columnFilters.filter(f => f.id !== searchKey).length;
 
     return (
-        <div className="rounded-xl border border-admin-border bg-admin-card shadow-admin-card overflow-hidden">
+        <div className="rounded-xl border border-admin-border bg-admin-card shadow-sm overflow-hidden">
             {/* Top Bar (Title, Search, Action Buttons) */}
             {(title || actions || searchKey) && (
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-5 py-4 border-b border-admin-border bg-admin-bg">
@@ -88,10 +190,9 @@ export function DataTable<TData, TValue>({
                         )}
                     </div>
 
-                    {/* Actions & Search area - Mobile: stacked full width, Desktop: auto width inline */}
+                    {/* Actions & Search area */}
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
 
-                        {/* Search Input */}
                         {searchKey && (
                             <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-admin-border bg-admin-card text-sm focus-within:border-admin-primary focus-within:ring-2 focus-within:ring-admin-primary/20 transition-all">
                                 <Search className="w-3.5 h-3.5 text-admin-muted-foreground shrink-0" />
@@ -104,11 +205,10 @@ export function DataTable<TData, TValue>({
                             </div>
                         )}
 
-                        {/* Action Buttons row */}
                         <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto mt-1 sm:mt-0">
                             <div className="flex items-center gap-2">
                                 {selectedCount > 0 && (
-                                    <span className="text-xs px-2.5 py-1 rounded-md bg-admin-accent-soft text-admin-primary font-medium">
+                                    <span className="text-[11px] px-2.5 py-1 rounded bg-admin-primary/10 text-admin-primary font-bold">
                                         {selectedCount} selected
                                     </span>
                                 )}
@@ -127,48 +227,46 @@ export function DataTable<TData, TValue>({
                                 </button>
                             </div>
 
-                            {/* Create Course Button (passed via props) */}
                             {actions}
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Expandable Filter Drawer */}
+            {/* Expandable Filter Drawer using the new Fancy Dropdowns */}
             {showFilters && (
-                <div className="px-5 py-4 border-b border-admin-border bg-admin-muted/5 flex flex-col sm:flex-row gap-4 sm:items-end animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="px-5 py-4 border-b border-admin-border bg-admin-bg/50 flex flex-col sm:flex-row gap-4 sm:items-end animate-in fade-in slide-in-from-top-2 duration-200">
 
                     <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
                         {/* Status Filter */}
                         <div className="flex flex-col gap-1.5 w-full sm:w-48">
                             <label className="text-[11px] font-bold text-admin-muted-foreground uppercase tracking-wider">Status</label>
-                            <select
-                                className="w-full rounded-md border border-admin-border bg-admin-card px-3 py-2 text-sm text-admin-fg focus:border-admin-primary focus:ring-1 focus:ring-admin-primary outline-none transition-shadow"
+                            <AdminFancyDropdown
+                                ariaLabel="Filter by status"
                                 value={(table.getColumn("status")?.getFilterValue() as string) ?? ""}
-                                onChange={(e) => table.getColumn("status")?.setFilterValue(e.target.value || undefined)}
-                            >
-                                <option value="">All Statuses</option>
-                                <option value="PUBLISHED">Published</option>
-                                <option value="DRAFT">Draft</option>
-                                <option value="DISABLED">Disabled</option>
-                            </select>
+                                onChange={(val) => table.getColumn("status")?.setFilterValue(val || undefined)}
+                                options={[
+                                    { value: "", label: "All Statuses" },
+                                    { value: "PUBLISHED", label: "Published" },
+                                    { value: "DRAFT", label: "Draft" },
+                                    { value: "DISABLED", label: "Disabled" },
+                                ]}
+                            />
                         </div>
 
                         {/* Course Type Filter */}
                         <div className="flex flex-col gap-1.5 w-full sm:w-48">
                             <label className="text-[11px] font-bold text-admin-muted-foreground uppercase tracking-wider">Course Type</label>
-                            <select
-                                className="w-full rounded-md border border-admin-border bg-admin-card px-3 py-2 text-sm text-admin-fg focus:border-admin-primary focus:ring-1 focus:ring-admin-primary outline-none transition-shadow"
+                            <AdminFancyDropdown
+                                ariaLabel="Filter by course type"
                                 value={(table.getColumn("isNcvet")?.getFilterValue() !== undefined ? String(table.getColumn("isNcvet")?.getFilterValue()) : "")}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    table.getColumn("isNcvet")?.setFilterValue(val === "" ? undefined : val === "true");
-                                }}
-                            >
-                                <option value="">All Types</option>
-                                <option value="true">NCVET Certified</option>
-                                <option value="false">Standard</option>
-                            </select>
+                                onChange={(val) => table.getColumn("isNcvet")?.setFilterValue(val === "" ? undefined : val === "true")}
+                                options={[
+                                    { value: "", label: "All Types" },
+                                    { value: "true", label: "NCVET Certified" },
+                                    { value: "false", label: "Standard" },
+                                ]}
+                            />
                         </div>
                     </div>
 
@@ -180,7 +278,7 @@ export function DataTable<TData, TValue>({
                                     table.getColumn("status")?.setFilterValue(undefined);
                                     table.getColumn("isNcvet")?.setFilterValue(undefined);
                                 }}
-                                className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 sm:px-2 py-2.5 sm:py-1.5 rounded-md border border-admin-border sm:border-transparent bg-admin-card sm:bg-transparent shadow-sm sm:shadow-none text-xs font-medium text-red-500 sm:text-admin-muted-foreground hover:bg-red-500/10 hover:text-red-500 transition-colors"
+                                className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 sm:px-2 py-2.5 sm:py-1.5 rounded-md border border-admin-border sm:border-transparent bg-admin-card sm:bg-transparent text-xs font-medium text-red-500 hover:bg-red-500/10 transition-colors"
                             >
                                 <X className="w-4 h-4 sm:w-3.5 sm:h-3.5" /> Clear Filters
                             </button>
@@ -189,12 +287,12 @@ export function DataTable<TData, TValue>({
                 </div>
             )}
 
-            {/* Table Area... (Rest of the component remains exactly the same) */}
+            {/* Table Area */}
             <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                     <thead>
                         {table.getHeaderGroups().map((headerGroup) => (
-                            <tr key={headerGroup.id} className="border-b border-admin-border bg-admin-bg/50">
+                            <tr key={headerGroup.id} className="border-b border-admin-border bg-admin-bg/30">
                                 {headerGroup.headers.map((header) => (
                                     <th key={header.id} className="px-5 py-3 text-left whitespace-nowrap">
                                         {header.isPlaceholder ? null : (
@@ -258,7 +356,7 @@ export function DataTable<TData, TValue>({
 
             {/* Pagination */}
             <div className="flex flex-col sm:flex-row items-center justify-between px-5 py-3 border-t border-admin-border bg-admin-bg gap-4">
-                <p className="text-xs text-admin-muted-foreground text-center sm:text-left w-full sm:w-auto">
+                <p className="text-[12px] sm:text-[13px] text-admin-muted-foreground text-center sm:text-left w-full sm:w-auto">
                     Showing <span className="font-medium text-admin-fg">{table.getFilteredRowModel().rows.length > 0 ? table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1 : 0}</span>–
                     <span className="font-medium text-admin-fg">{Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, table.getFilteredRowModel().rows.length)}</span>{" "}
                     of <span className="font-medium text-admin-fg">{table.getFilteredRowModel().rows.length}</span> results

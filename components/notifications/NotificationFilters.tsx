@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, ChevronDown, RotateCcw, Search, SlidersHorizontal } from "lucide-react";
+import { Search, RotateCcw } from "lucide-react";
 import type { NotificationFilters as NotificationFilterState } from "@/hooks/useNotifications";
 
 type Props = {
@@ -12,90 +12,110 @@ type Props = {
 };
 
 // Flat, minimal input class
-const inputClass = "h-[38px] w-full rounded-lg border border-admin-border bg-admin-bg/50 px-3 text-[13px] text-admin-fg outline-none transition-all placeholder:text-admin-muted-foreground focus:border-admin-primary/50 focus:bg-admin-card focus:ring-2 focus:ring-admin-primary/10";
-
-type SelectOption<T extends string> = { value: T | ""; label: string };
+const inputClass = "h-10 w-full rounded-lg border border-admin-border bg-admin-card px-3 text-[13px] text-admin-fg shadow-sm outline-none transition-all placeholder:text-admin-muted-foreground focus:border-admin-primary focus:ring-2 focus:ring-admin-primary/20";
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
-    <span className="mb-1.5 block text-[11px] font-semibold text-admin-fg">
+    <span className="mb-1.5 block text-[11px] font-semibold text-admin-fg uppercase tracking-wider">
       {children}
     </span>
   );
 }
 
-// Keeping the beautiful dropdown animation as requested
-function ModernSelect<T extends string>({ value, onChange, options, placeholder, ariaLabel }: any) {
-  const buttonId = useId();
-  const listboxId = useMemo(() => `listbox-${buttonId}`, [buttonId]);
+// --- Custom Animated Dropdown adapted for Admin UI ---
+function AdminFancyDropdown({
+  ariaLabel,
+  value,
+  onChange,
+  options,
+  placeholder = "Select...",
+}: {
+  ariaLabel: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  placeholder?: string;
+}) {
   const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const active = options.find((o) => o.value === value) ?? { label: placeholder, value: "" };
 
-  const selectedLabel = options.find((o: any) => o.value === value)?.label ?? (value ? String(value) : placeholder);
+  useEffect(() => {
+    const listener = (event: MouseEvent | TouchEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", listener);
+    document.addEventListener("touchstart", listener, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", listener);
+      document.removeEventListener("touchstart", listener);
+    };
+  }, []);
 
   useEffect(() => {
     if (!open) return;
-    const onPointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
     };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
   return (
-    <div ref={rootRef} className="relative">
-      <button
+    <div ref={rootRef} className="relative w-full">
+      <motion.button
         type="button"
-        id={buttonId}
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.98 }}
+        onClick={() => setOpen((v) => !v)}
         aria-label={ariaLabel}
         aria-haspopup="listbox"
         aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
-        className={`${inputClass} group inline-flex items-center justify-between gap-3 px-3 text-left hover:border-admin-primary/40`}
+        className={`group flex h-10 w-full items-center justify-between gap-3 rounded-lg border bg-admin-card px-3 text-left transition-[border-color,box-shadow,background-color] duration-200 border-admin-border shadow-sm hover:border-admin-primary/50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-admin-primary/20 ${open ? "border-admin-primary shadow-md ring-2 ring-admin-primary/15" : ""}`}
       >
-        <span className={`min-w-0 flex-1 truncate ${value ? "text-admin-fg" : "text-admin-muted-foreground"}`}>
-          {selectedLabel}
+        <span className={`truncate text-[13px] font-medium ${value ? "text-admin-fg" : "text-admin-muted-foreground"}`}>
+          {active.label}
         </span>
-        <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-admin-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
-      </button>
+        <span className="flex items-center text-admin-muted-foreground transition-colors group-hover:text-admin-fg">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`}>
+            <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </span>
+      </motion.button>
 
       <AnimatePresence>
         {open && (
           <motion.div
-            key={listboxId}
-            initial={{ opacity: 0, y: 4, scale: 0.98 }}
+            initial={{ opacity: 0, y: 6, scale: 0.985 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 4, scale: 0.98 }}
-            transition={{ duration: 0.15 }}
-            className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 overflow-hidden rounded-lg border border-admin-border bg-admin-card shadow-lg"
+            exit={{ opacity: 0, y: 4, scale: 0.985 }}
+            transition={{ duration: 0.17, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="absolute left-0 right-0 z-50 mt-1.5 w-full origin-top overflow-hidden rounded-xl border border-admin-border bg-admin-card/95 shadow-[0_22px_48px_-20px_rgba(0,0,0,0.38)] backdrop-blur-md"
+            role="listbox"
           >
-            <div className="max-h-64 overflow-auto p-1">
-              <div className="flex flex-col">
-                {options.map((option: any) => {
-                  const isSelected = option.value === value;
-                  return (
-                    <button
-                      key={option.value || "__all"}
-                      type="button"
-                      onClick={() => { onChange(option.value); setOpen(false); }}
-                      className={`flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-[13px] transition-colors ${isSelected
-                        ? "bg-admin-primary/10 text-admin-primary font-medium"
-                        : "text-admin-fg hover:bg-admin-muted/5"
-                        }`}
-                    >
-                      <span className="truncate">{option.label}</span>
-                      {isSelected && <Check className="h-3.5 w-3.5 shrink-0" />}
-                    </button>
-                  );
-                })}
-              </div>
+            <div className="max-h-60 overflow-auto p-1.5 custom-scrollbar">
+              {options.map((opt) => {
+                const selected = opt.value === value;
+                return (
+                  <button
+                    key={opt.value || "__all"}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    onClick={() => { onChange(opt.value); setOpen(false); }}
+                    className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-[13px] transition-[background-color,color,transform] duration-150 hover:bg-admin-primary/10 hover:text-admin-fg active:scale-[0.99] ${selected ? "bg-admin-primary/10 font-semibold text-admin-primary" : "text-admin-fg"}`}
+                  >
+                    <span className="truncate">{opt.label}</span>
+                    {selected && (
+                      <span className="text-admin-primary">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <path d="M20 6 9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </motion.div>
         )}
@@ -110,7 +130,7 @@ export default function NotificationFilters({ filters, onChange, onReset }: Prop
   };
 
   return (
-    <section className="bg-admin-card rounded-xl border border-admin-border/60 p-4 sm:p-5 shadow-sm">
+    <section className="bg-admin-card rounded-xl border border-admin-border/60 p-4 sm:p-5 shadow-sm mb-6">
       <div className="flex flex-col gap-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 
@@ -118,12 +138,12 @@ export default function NotificationFilters({ filters, onChange, onReset }: Prop
           <div className="lg:col-span-1">
             <FieldLabel>Search Recipient</FieldLabel>
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-admin-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-admin-muted-foreground" />
               <input
                 type="text"
                 value={filters.search ?? ""}
                 placeholder="Email or phone..."
-                className={`${inputClass} pl-8`}
+                className={`${inputClass} pl-9`}
                 onChange={(e) => updateFilter("search", e.target.value)}
               />
             </div>
@@ -132,11 +152,11 @@ export default function NotificationFilters({ filters, onChange, onReset }: Prop
           {/* Channel */}
           <div>
             <FieldLabel>Channel</FieldLabel>
-            <ModernSelect
+            <AdminFancyDropdown
               ariaLabel="Channel filter"
               placeholder="All channels"
-              value={(filters.channel ?? "") as "" | "EMAIL" | "WHATSAPP" | "SMS"}
-              onChange={(v: any) => updateFilter("channel", v)}
+              value={(filters.channel ?? "") as string}
+              onChange={(v) => updateFilter("channel", v)}
               options={[
                 { value: "", label: "All channels" },
                 { value: "EMAIL", label: "Email" },
@@ -149,11 +169,11 @@ export default function NotificationFilters({ filters, onChange, onReset }: Prop
           {/* Status */}
           <div>
             <FieldLabel>Status</FieldLabel>
-            <ModernSelect
+            <AdminFancyDropdown
               ariaLabel="Status filter"
               placeholder="All statuses"
-              value={(filters.status ?? "") as "" | "SENT" | "FAILED" | "PENDING"}
-              onChange={(v: any) => updateFilter("status", v)}
+              value={(filters.status ?? "") as string}
+              onChange={(v) => updateFilter("status", v)}
               options={[
                 { value: "", label: "All statuses" },
                 { value: "SENT", label: "Sent" },
@@ -166,11 +186,11 @@ export default function NotificationFilters({ filters, onChange, onReset }: Prop
           {/* Template */}
           <div>
             <FieldLabel>Template</FieldLabel>
-            <ModernSelect
+            <AdminFancyDropdown
               ariaLabel="Template filter"
               placeholder="All templates"
-              value={(filters.template ?? "") as "" | "otp" | "welcome" | "resetPassword"}
-              onChange={(v: any) => updateFilter("template", v)}
+              value={(filters.template ?? "") as string}
+              onChange={(v) => updateFilter("template", v)}
               options={[
                 { value: "", label: "All templates" },
                 { value: "otp", label: "OTP" },
@@ -204,7 +224,7 @@ export default function NotificationFilters({ filters, onChange, onReset }: Prop
             <button
               type="button"
               onClick={onReset}
-              className="inline-flex h-9.5 items-center justify-center gap-2 rounded-lg border border-admin-border bg-admin-bg/50 px-4 text-[13px] font-medium text-admin-fg hover:bg-admin-muted/10 transition-colors w-full sm:w-auto"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-admin-border bg-admin-bg/50 px-4 text-[13px] font-medium text-admin-fg hover:bg-admin-muted/10 transition-colors w-full sm:w-auto active:scale-[0.98]"
             >
               <RotateCcw className="h-3.5 w-3.5" /> Clear Filters
             </button>
