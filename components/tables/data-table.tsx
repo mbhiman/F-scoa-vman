@@ -246,7 +246,7 @@ export function DataTable<TData, TValue>({
                                 value={(table.getColumn("status")?.getFilterValue() as string) ?? ""}
                                 onChange={(val) => table.getColumn("status")?.setFilterValue(val || undefined)}
                                 options={[
-                                    { value: "", label: "All Statuses" },
+                                    { value: "", label: "All Status" },
                                     { value: "PUBLISHED", label: "Published" },
                                     { value: "DRAFT", label: "Draft" },
                                     { value: "DISABLED", label: "Disabled" },

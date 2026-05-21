@@ -171,11 +171,11 @@ export default function NotificationFilters({ filters, onChange, onReset }: Prop
             <FieldLabel>Status</FieldLabel>
             <AdminFancyDropdown
               ariaLabel="Status filter"
-              placeholder="All statuses"
+              placeholder="All status"
               value={(filters.status ?? "") as string}
               onChange={(v) => updateFilter("status", v)}
               options={[
-                { value: "", label: "All statuses" },
+                { value: "", label: "All status" },
                 { value: "SENT", label: "Sent" },
                 { value: "FAILED", label: "Failed" },
                 { value: "PENDING", label: "Pending" },
