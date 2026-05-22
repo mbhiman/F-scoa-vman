@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -56,11 +56,10 @@ interface EnrollmentFormBuilderProps {
     initialData?: any;
     onSubmit: (data: EnrollmentFormType) => Promise<void>;
     onBack?: () => void;
+    isSubmitting?: boolean;
 }
 
-export function EnrollmentFormBuilder({ initialData, onSubmit, onBack }: EnrollmentFormBuilderProps) {
-    const [isSubmitting, setIsSubmitting] = useState(false);
-
+export function EnrollmentFormBuilder({ initialData, onSubmit, onBack, isSubmitting = false }: EnrollmentFormBuilderProps) {
     const form = useForm<EnrollmentFormType>({
         resolver: zodResolver(enrollmentFormSchema),
         mode: "onChange",
@@ -71,13 +70,19 @@ export function EnrollmentFormBuilder({ initialData, onSubmit, onBack }: Enrollm
         },
     });
 
+    React.useEffect(() => {
+        form.reset({
+            name: initialData?.name || "",
+            groups: initialData?.groups || [],
+            fields: initialData?.fields || [],
+        });
+    }, [initialData, form]);
+
     const { fields: groups, append: appendGroup, remove: removeGroup } = useFieldArray({ control: form.control, name: "groups" });
     const { fields: formFields, append: appendField, remove: removeField } = useFieldArray({ control: form.control, name: "fields" });
 
     const handleSubmit = async (values: EnrollmentFormType) => {
-        setIsSubmitting(true);
         await onSubmit(values);
-        setIsSubmitting(false);
     };
 
     return (

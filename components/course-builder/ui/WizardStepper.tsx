@@ -5,12 +5,13 @@ import { Check, Lock } from "lucide-react";
 
 interface WizardStepperProps {
     currentStep: number;
-    courseId: string | null;
     onStepClick: (step: number) => void;
     maxAllowedStep: number;
+    /** Create flow: only current + completed steps are clickable */
+    sequentialOnly?: boolean;
 }
 
-export function WizardStepper({ currentStep, courseId, onStepClick, maxAllowedStep }: WizardStepperProps) {
+export function WizardStepper({ currentStep, onStepClick, maxAllowedStep, sequentialOnly = false }: WizardStepperProps) {
     const steps = [
         { num: 1, title: "Basic Info" },
         { num: 2, title: "Enrollment" },
@@ -27,8 +28,7 @@ export function WizardStepper({ currentStep, courseId, onStepClick, maxAllowedSt
                     const isActive = currentStep === step.num;
                     const isCompleted = currentStep > step.num;
 
-                    // TS FIX: Wrapped in Boolean() so it strictly returns true or false, not the courseId string
-                    const isLocked = Boolean((step.num === 1 && courseId) || (step.num > maxAllowedStep));
+                    const isLocked = step.num > maxAllowedStep;
 
                     return (
                         <React.Fragment key={step.num}>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,11 +33,10 @@ interface QuizBuilderProps {
     initialData?: any;
     onSubmit: (data: QuizFormType) => Promise<void>;
     onBack: () => void;
+    isSubmitting?: boolean;
 }
 
-export function QuizBuilder({ initialData, onSubmit, onBack }: QuizBuilderProps) {
-    const [isSubmitting, setIsSubmitting] = useState(false);
-
+export function QuizBuilder({ initialData, onSubmit, onBack, isSubmitting = false }: QuizBuilderProps) {
     const form = useForm<QuizFormType>({
         resolver: zodResolver(quizSchema),
         mode: "onChange",
@@ -49,10 +48,18 @@ export function QuizBuilder({ initialData, onSubmit, onBack }: QuizBuilderProps)
         },
     });
 
+    React.useEffect(() => {
+        form.reset({
+            title: initialData?.title || "",
+            questions: initialData?.questions?.length ? initialData.questions : [
+                { question_text: "", sort_order: 0, options: [{ option_text: "", is_correct: true, sort_order: 0 }, { option_text: "", is_correct: false, sort_order: 1 }] },
+            ],
+        });
+    }, [initialData, form]);
+
     const { fields: questions, append: appendQuestion, remove: removeQuestion } = useFieldArray({ control: form.control, name: "questions" });
 
     const handleSubmit = async (values: QuizFormType) => {
-        setIsSubmitting(true);
         const payload = {
             ...values,
             questions: values.questions.map((q, qIdx) => ({
@@ -62,7 +69,6 @@ export function QuizBuilder({ initialData, onSubmit, onBack }: QuizBuilderProps)
             }))
         };
         await onSubmit(payload);
-        setIsSubmitting(false);
     };
 
     return (

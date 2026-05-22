@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,11 +18,10 @@ interface ExamSettingsFormProps {
     initialData?: any;
     onSubmit: (data: ExamSettingsFormType) => Promise<void>;
     onBack: () => void;
+    isSubmitting?: boolean;
 }
 
-export function ExamSettingsForm({ initialData, onSubmit, onBack }: ExamSettingsFormProps) {
-    const [isSubmitting, setIsSubmitting] = useState(false);
-
+export function ExamSettingsForm({ initialData, onSubmit, onBack, isSubmitting = false }: ExamSettingsFormProps) {
     const form = useForm<ExamSettingsFormType>({
         resolver: zodResolver(examSettingsSchema),
         mode: "onChange",
@@ -34,10 +33,17 @@ export function ExamSettingsForm({ initialData, onSubmit, onBack }: ExamSettings
         },
     });
 
+    React.useEffect(() => {
+        form.reset({
+            duration_minutes: initialData?.duration_minutes ?? 60,
+            passing_percentage: initialData?.passing_percentage ?? 70,
+            max_attempts: initialData?.max_attempts ?? 1,
+            cooldown_hours: initialData?.cooldown_hours ?? 720,
+        });
+    }, [initialData, form]);
+
     const handleSubmit = async (values: ExamSettingsFormType) => {
-        setIsSubmitting(true);
         await onSubmit(values);
-        setIsSubmitting(false);
     };
 
     return (

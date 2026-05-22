@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,11 +15,10 @@ interface CertificateUploadProps {
     initialData?: any;
     onSubmit: (formData: FormData, rawValues: CertificateFormType) => Promise<void>;
     onBack: () => void;
+    isSubmitting?: boolean;
 }
 
-export function CertificateUpload({ initialData, onSubmit, onBack }: CertificateUploadProps) {
-    const [isSubmitting, setIsSubmitting] = useState(false);
-
+export function CertificateUpload({ initialData, onSubmit, onBack, isSubmitting = false }: CertificateUploadProps) {
     const form = useForm<CertificateFormType>({
         resolver: zodResolver(certificateSchema),
         mode: "onChange",
@@ -27,6 +26,12 @@ export function CertificateUpload({ initialData, onSubmit, onBack }: Certificate
             template: initialData?.template || initialData?.templateUrl || undefined
         }
     });
+
+    useEffect(() => {
+        form.reset({
+            template: initialData?.template || initialData?.templateUrl || undefined,
+        });
+    }, [initialData, form]);
 
     const currentTemplate = form.watch("template");
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -44,13 +49,11 @@ export function CertificateUpload({ initialData, onSubmit, onBack }: Certificate
     }, [currentTemplate]);
 
     const handleSubmit = async (values: CertificateFormType) => {
-        setIsSubmitting(true);
         const fd = new FormData();
         if (values.template instanceof File) {
             fd.append("template", values.template);
         }
         await onSubmit(fd, values);
-        setIsSubmitting(false);
     };
 
     return (

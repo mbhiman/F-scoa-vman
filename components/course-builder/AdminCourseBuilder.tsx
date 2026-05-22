@@ -1,16 +1,26 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { useBuilderStore } from "../../store/course-builder-store";
-import { adminAuthFetch, parseApiError } from "../../lib/admin-api";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import {
+  useCreateCourse,
+  useUpdateCourse,
+  useGetFullCourse,
+  useSaveEnrollmentForm,
+  useSaveQuiz,
+  useSaveExamSettings,
+  useUploadCertificate,
+  useUpdateCourseStatus,
+  getMaxBuilderStep,
+  mapApiToBuilderDrafts,
+  type SaveEnrollmentFormPayload,
+  type SaveQuizPayload,
+  type SaveExamSettingsPayload,
+} from "@/hooks/coursebuilder";
 
-// UI Components
 import { WizardHeader } from "./ui/WizardHeader";
 import { WizardStepper } from "./ui/WizardStepper";
 import { StatusBanner } from "./ui/StatusBanner";
-
-// Step Components
 import { BasicInfoForm } from "./steps/1-BasicInfoForm";
 import { EnrollmentFormBuilder } from "./steps/2-EnrollmentForm";
 import { QuizBuilder } from "./steps/3-QuizBuilder";
@@ -18,250 +28,424 @@ import { ExamSettingsForm } from "./steps/4-ExamSettingsForm";
 import { CertificateUpload } from "./steps/5-CertificateUpload";
 import { ReviewAndPublish } from "./steps/6-ReviewAndPublish";
 
+const editStepSessionKey = (courseId: string) =>
+  `scoa-admin-course-edit-step-${courseId}`;
+
+function parseWizardStep(value: string | null): number | null {
+  if (!value) return null;
+  const n = Number.parseInt(value, 10);
+  if (n >= 1 && n <= 6) return n;
+  return null;
+}
+
+function writeEditStepSession(courseId: string, step: number) {
+  sessionStorage.setItem(editStepSessionKey(courseId), String(step));
+}
+
+function clearEditStepSession(courseId: string) {
+  sessionStorage.removeItem(editStepSessionKey(courseId));
+}
+
 export default function AdminCourseBuilder() {
-    const router = useRouter();
-    const params = useParams();
-    const routeCourseIdRaw = (params as Record<string, string | string[] | undefined>)?.courseId;
-    const routeCourseId = Array.isArray(routeCourseIdRaw) ? routeCourseIdRaw[0] : routeCourseIdRaw;
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const params = useParams();
+  const routeCourseIdRaw = (params as Record<string, string | string[] | undefined>)?.courseId;
+  const routeCourseId = Array.isArray(routeCourseIdRaw) ? routeCourseIdRaw[0] : routeCourseIdRaw;
 
-    const { step, setStep, courseId, setCourseId, drafts, setDraft, hydrateFromApi, reset } = useBuilderStore();
+  const flowMode = searchParams.get("mode");
+  const isCreateRoute = routeCourseId === "create";
+  const isCreateFlow = isCreateRoute || flowMode === "create";
+  const editCourseId =
+    routeCourseId && routeCourseId !== "create" ? routeCourseId : null;
+  const isEditFlow = Boolean(editCourseId) && !isCreateFlow;
 
-    const [error, setError] = useState<string>("");
-    const [success, setSuccess] = useState<string>("");
-    const [editMode, setEditMode] = useState(false);
+  /** Edit: step from URL (SSR-safe). Create: always start at step 1. */
+  const urlStep = parseWizardStep(searchParams.get("step"));
+  const [step, setStep] = useState(isCreateRoute ? 1 : (urlStep ?? 1));
+  const [createCourseId, setCreateCourseId] = useState<string | null>(null);
+  /** Create wizard: unlock next step only after previous step saved successfully. */
+  const [highestStepReached, setHighestStepReached] = useState(1);
+  const [success, setSuccess] = useState("");
 
-    const requireCourseId = () => {
-        if (!courseId) throw new Error("Course not initialized yet. Please complete Basic Info first.");
-        return courseId;
-    };
+  /** Create: only the id created in this session. Edit: route id. */
+  const activeCourseId = isCreateFlow ? createCourseId : editCourseId;
 
-    const loadFullCourseData = async (id: string) => {
-        setError(""); setSuccess("");
-        try {
-            const res = await adminAuthFetch(`/admin/courses/${id}/full`);
-            if (!res.ok) throw new Error(await parseApiError(res));
+  /** Populate from API on edit, or create only after step 1 saved (back navigation). */
+  const shouldLoadCourseData = isEditFlow || Boolean(createCourseId);
+  const fullCourseId = shouldLoadCourseData ? activeCourseId : null;
 
-            const json = await res.json();
-            hydrateFromApi(json.data);
-        } catch (e: any) {
-            setError(e?.message ?? "Failed to load course data");
-        }
-    };
+  const populateFromApi = shouldLoadCourseData;
 
-    useEffect(() => {
-        if (!routeCourseId || routeCourseId === "create") {
-            if (courseId) {
-                reset();
-            }
-            setEditMode(false);
-            setStep(1);
-            return;
-        }
+  const { data: fullCourse, loading: loadingFull, error: loadError, refetch } =
+    useGetFullCourse(fullCourseId);
 
-        if (courseId === routeCourseId) {
-            if (!editMode) setEditMode(true);
-            return;
-        }
+  const courseData = useMemo(() => {
+    if (!fullCourse) return null;
+    return mapApiToBuilderDrafts(fullCourse);
+  }, [fullCourse]);
 
-        setEditMode(true);
-        void loadFullCourseData(routeCourseId);
-        setStep(1);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [routeCourseId]);
+  const dataVersion = fullCourse?.course?.id ?? "empty";
 
-    const handleReset = () => {
-        reset();
-        setEditMode(false);
-        setError(""); setSuccess("");
-        try { router.replace("/admin/courses/create"); } catch { /* ignore */ }
-    };
+  const { create, loading: creating, error: createError, validationErrors: createValidationErrors } =
+    useCreateCourse();
+  const { update, loading: updating, error: updateError, validationErrors: updateValidationErrors } =
+    useUpdateCourse(activeCourseId);
+  const { save: saveEnrollment, loading: savingEnrollment, error: enrollmentError } =
+    useSaveEnrollmentForm(activeCourseId);
+  const { save: saveQuiz, loading: savingQuiz, error: quizError } = useSaveQuiz(activeCourseId);
+  const { save: saveExamSettings, loading: savingExam, error: examError } =
+    useSaveExamSettings(activeCourseId);
+  const { upload: uploadCertificate, loading: uploadingCert, error: certificateError } =
+    useUploadCertificate(activeCourseId);
+  const { updateStatus, loading: publishing, error: publishError } =
+    useUpdateCourseStatus(activeCourseId);
 
-    // --- GATEKEEPER LOGIC START ---
+  const prevEditIdRef = useRef<string | null>(null);
+  const prevRouteCourseIdRef = useRef<string | undefined>(undefined);
 
-    // Dynamically calculate the highest step the user is allowed to view
-    const maxAllowedStep = useMemo(() => {
-        if (!courseId) return 1;
-        if (!drafts.enrollmentForm) return 2;
-        if (!drafts.quiz) return 3;
-        if (!drafts.examSettings) return 4;
-        if (!drafts.certificate) return 5;
-        return 6;
-    }, [courseId, drafts]);
+  // Entering /admin/courses/create — blank wizard (not when already on create mid-flow)
+  useEffect(() => {
+    const id = routeCourseId ?? "";
+    if (prevRouteCourseIdRef.current === id) return;
+    prevRouteCourseIdRef.current = id;
+    if (id !== "create") return;
+    setCreateCourseId(null);
+    setStep(1);
+    setHighestStepReached(1);
+    setSuccess("");
+  }, [routeCourseId]);
 
-    // Intercept stepper clicks to block illegal navigation
-    const handleStepperClick = (targetStep: number) => {
-        // Rule 1: Cannot go back to Basic Info once course ID exists
-        if (courseId && targetStep === 1) return;
-        // Rule 2: Cannot skip ahead of the highest completed step
-        if (targetStep > maxAllowedStep) return;
+  // Edit: restore step from URL (reload) or step 1 when opening from list (no ?step=)
+  useEffect(() => {
+    if (!isEditFlow || !editCourseId) return;
+    if (prevEditIdRef.current === editCourseId) return;
 
-        setStep(targetStep);
-    };
+    const urlStep = parseWizardStep(searchParams.get("step"));
+    if (urlStep != null) {
+      setStep(urlStep);
+      writeEditStepSession(editCourseId, urlStep);
+    } else {
+      setStep(1);
+      clearEditStepSession(editCourseId);
+    }
+    setSuccess("");
+    prevEditIdRef.current = editCourseId;
+  }, [isEditFlow, editCourseId, searchParams]);
 
-    // --- GATEKEEPER LOGIC END ---
+  // Browser back/forward: stay in sync with ?step= in the URL
+  const stepQuery = searchParams.get("step");
+  useEffect(() => {
+    if (!isEditFlow) return;
+    const fromUrl = parseWizardStep(stepQuery);
+    if (fromUrl != null) setStep((current) => (current === fromUrl ? current : fromUrl));
+  }, [isEditFlow, stepQuery]);
 
-    const handleBasicInfoSubmit = async (formData: FormData, rawValues: any) => {
-        setError(""); setSuccess("");
-        try {
-            setDraft("basicInfo", rawValues);
+  // Keep ?step= in URL so reload stays on the same wizard step while data loads
+  const lastSyncedEditUrlRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isEditFlow || !editCourseId) return;
+    const target = `/admin/courses/${editCourseId}?mode=edit&step=${step}`;
+    if (lastSyncedEditUrlRef.current === target) return;
+    lastSyncedEditUrlRef.current = target;
+    writeEditStepSession(editCourseId, step);
+    router.replace(target, { scroll: false });
+  }, [isEditFlow, editCourseId, step, router]);
 
-            if (courseId) {
-                const res = await adminAuthFetch(`/admin/courses/${courseId}`, {
-                    method: "PATCH",
-                    body: formData
-                });
-                if (!res.ok) throw new Error(await parseApiError(res));
+  const syncFromServer = useCallback(() => {
+    if (isEditFlow) refetch();
+  }, [isEditFlow, refetch]);
 
-                setStep(2);
-                setSuccess("Course updated. Proceed to enrollment.");
-                return;
-            }
+  const maxAllowedStep = useMemo(() => {
+    if (isCreateFlow) return highestStepReached;
+    if (courseData) return getMaxBuilderStep(courseData);
+    return 1;
+  }, [isCreateFlow, highestStepReached, courseData]);
 
-            const res = await adminAuthFetch(`/admin/courses`, {
-                method: "POST",
-                body: formData
-            });
-            if (!res.ok) throw new Error(await parseApiError(res));
-            const json = await res.json();
+  const displayError = useMemo(() => {
+    const hookError =
+      loadError ||
+      createError ||
+      updateError ||
+      enrollmentError ||
+      quizError ||
+      examError ||
+      certificateError ||
+      publishError;
+    if (hookError) return hookError;
+    const validation = [...createValidationErrors, ...updateValidationErrors];
+    if (validation.length > 0) {
+      return validation.map((e) => `${e.field}: ${e.message}`).join(", ");
+    }
+    return "";
+  }, [
+    loadError,
+    createError,
+    updateError,
+    enrollmentError,
+    quizError,
+    examError,
+    certificateError,
+    publishError,
+    createValidationErrors,
+    updateValidationErrors,
+  ]);
 
-            setCourseId(json.data.id);
-            setEditMode(true);
+  const advanceCreate = (completedStep: number, nextStep: number) => {
+    setHighestStepReached((prev) => Math.max(prev, completedStep + 1, nextStep));
+    setStep(nextStep);
+  };
 
-            try { router.replace(`/admin/courses/${json.data.id}`); } catch { /* ignore */ }
+  const handleStepperClick = (targetStep: number) => {
+    if (targetStep > maxAllowedStep) return;
+    if (targetStep < step && activeCourseId) refetch();
+    setStep(targetStep);
+  };
 
-            setStep(2);
-            setSuccess("Course created. Continue to enrollment.");
-        } catch (e: any) {
-            setError(e?.message ?? "Failed to save course basic info");
-        }
-    };
+  const handleReset = () => {
+    setCreateCourseId(null);
+    setHighestStepReached(1);
+    setStep(1);
+    setSuccess("");
+    router.replace("/admin/courses/create");
+  };
 
-    const handleEnrollmentSubmit = async (data: any) => {
-        setError(""); setSuccess("");
-        try {
-            setDraft("enrollmentForm", data);
-            const id = requireCourseId();
-            const res = await adminAuthFetch(`/admin/courses/${id}/enrollment-form`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data),
-            });
+  const handleBasicInfoSubmit = async (formData: FormData, rawValues: Record<string, unknown>) => {
+    setSuccess("");
 
-            if (!res.ok) throw new Error(await parseApiError(res));
-            setStep(3);
-            setSuccess("Enrollment form saved.");
-        } catch (e: any) {
-            setError(e?.message ?? "Failed to save enrollment");
-        }
-    };
+    if (isCreateFlow && !createCourseId && !activeCourseId) {
+      const result = await create(formData);
+      if (!result) return;
 
-    const handleQuizSubmit = async (data: any) => {
-        setError(""); setSuccess("");
-        try {
-            setDraft("quiz", data);
-            const id = requireCourseId();
-            const res = await adminAuthFetch(`/admin/courses/${id}/quiz`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data),
-            });
+      setCreateCourseId(result.id);
+      advanceCreate(1, 2);
+      setSuccess("Course created. Continue to enrollment.");
+      return;
+    }
 
-            if (!res.ok) throw new Error(await parseApiError(res));
-            setStep(4);
-            setSuccess("Quiz saved.");
-        } catch (e: any) {
-            setError(e?.message ?? "Failed to save quiz");
-        }
-    };
+    if (!activeCourseId) return;
+    const result = await update(formData);
+    if (!result) return;
 
-    const handleExamSettingsSubmit = async (data: any) => {
-        setError(""); setSuccess("");
-        try {
-            setDraft("examSettings", data);
-            const id = requireCourseId();
-            const res = await adminAuthFetch(`/admin/courses/${id}/exam-settings`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data),
-            });
+    if (isCreateFlow) {
+      advanceCreate(1, 2);
+      setSuccess("Basic info saved. Continue to enrollment.");
+    } else {
+      setStep(2);
+      setSuccess("Course updated.");
+      syncFromServer();
+    }
+  };
 
-            if (!res.ok) throw new Error(await parseApiError(res));
-            setStep(5);
-            setSuccess("Exam settings saved.");
-        } catch (e: any) {
-            setError(e?.message ?? "Failed to save exam settings");
-        }
-    };
+  const handleEnrollmentSubmit = async (data: SaveEnrollmentFormPayload) => {
+    setSuccess("");
+    if (!activeCourseId) return;
 
-    const handleCertificateSubmit = async (formData: FormData, rawValues: any) => {
-        setError(""); setSuccess("");
-        try {
-            setDraft("certificate", rawValues);
-            const id = requireCourseId();
-            const res = await adminAuthFetch(`/admin/courses/${id}/certificate`, { method: "POST", body: formData });
+    const result = await saveEnrollment(data);
+    if (!result) return;
 
-            if (!res.ok) throw new Error(await parseApiError(res));
+    if (isCreateFlow) {
+      advanceCreate(2, 3);
+      setSuccess("Enrollment form saved. Continue to quiz.");
+    } else {
+      setStep(3);
+      setSuccess("Enrollment form saved.");
+      syncFromServer();
+    }
+  };
 
-            setStep(6);
-            setSuccess("Certificate uploaded. Please review your course.");
-        } catch (e: any) {
-            setError(e?.message ?? "Failed to upload certificate");
-        }
-    };
+  const handleQuizSubmit = async (data: SaveQuizPayload) => {
+    setSuccess("");
+    if (!activeCourseId) return;
 
-    const handlePublish = async () => {
-        setError(""); setSuccess("");
-        try {
-            const id = requireCourseId();
-            const res = await adminAuthFetch(`/admin/courses/${id}/status`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status: "PUBLISHED" }),
-            });
+    const result = await saveQuiz(data);
+    if (!result) return;
 
-            if (!res.ok) throw new Error(await parseApiError(res));
+    if (isCreateFlow) {
+      advanceCreate(3, 4);
+      setSuccess("Quiz saved. Continue to exam settings.");
+    } else {
+      setStep(4);
+      setSuccess("Quiz saved.");
+      syncFromServer();
+    }
+  };
 
-            setSuccess("Course published successfully! Redirecting...");
-            setTimeout(() => {
-                router.push("/admin/courses");
-            }, 1500);
+  const handleExamSettingsSubmit = async (data: SaveExamSettingsPayload) => {
+    setSuccess("");
+    if (!activeCourseId) return;
 
-        } catch (e: any) {
-            setError(e?.message ?? "Failed to publish course");
-        }
-    };
+    const result = await saveExamSettings(data);
+    if (!result) return;
 
-    return (
-        <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8 flex flex-col">
-            <WizardHeader editMode={editMode} courseId={courseId} onReset={handleReset} />
+    if (isCreateFlow) {
+      advanceCreate(4, 5);
+      setSuccess("Exam settings saved. Continue to certificate.");
+    } else {
+      setStep(5);
+      setSuccess("Exam settings saved.");
+      syncFromServer();
+    }
+  };
 
-            {/* Notice we pass maxAllowedStep and the new handler here */}
-            <WizardStepper
-                currentStep={step}
-                courseId={courseId}
-                onStepClick={handleStepperClick}
-                maxAllowedStep={maxAllowedStep}
+  const handleCertificateSubmit = async (formData: FormData, rawValues: Record<string, unknown>) => {
+    setSuccess("");
+    if (!activeCourseId) return;
+
+    const result = await uploadCertificate(formData);
+    if (!result) return;
+
+    if (isCreateFlow) {
+      advanceCreate(5, 6);
+      setSuccess("Certificate uploaded. Review and publish.");
+    } else {
+      setStep(6);
+      setSuccess("Certificate uploaded.");
+      syncFromServer();
+    }
+  };
+
+  const handlePublish = async () => {
+    setSuccess("");
+    if (!activeCourseId) return;
+
+    const result = await updateStatus("PUBLISHED");
+    if (!result) return;
+
+    setSuccess("Course published successfully! Redirecting...");
+    setTimeout(() => router.push("/admin/courses"), 1500);
+  };
+
+  const handleStepBack = (prevStep: number) => {
+    if (activeCourseId) refetch();
+    setStep(prevStep);
+  };
+
+  const reviewData = courseData;
+
+  const isStepDataLoading =
+    populateFromApi && Boolean(activeCourseId) && loadingFull && !courseData;
+  const isSaving =
+    creating || updating || savingEnrollment || savingQuiz || savingExam || uploadingCert || publishing;
+
+  const showStep = (n: number) => {
+    if (step !== n) return false;
+    if (n >= 2 && !activeCourseId) return false;
+    return true;
+  };
+
+  const StepLoading = () => (
+    <div className="flex items-center justify-center py-24 text-admin-muted-foreground text-sm">
+      Loading step data...
+    </div>
+  );
+
+  return (
+    <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8 flex flex-col">
+      <WizardHeader
+        isEdit={isEditFlow}
+        isCreate={isCreateFlow}
+        courseId={activeCourseId}
+        onReset={handleReset}
+      />
+
+      <WizardStepper
+        currentStep={step}
+        onStepClick={handleStepperClick}
+        maxAllowedStep={maxAllowedStep}
+        sequentialOnly={isCreateFlow}
+      />
+
+      <StatusBanner error={displayError} success={success} />
+
+      <>
+        {showStep(1) &&
+          (isStepDataLoading ? (
+            <StepLoading />
+          ) : (
+            <BasicInfoForm
+              key={
+                populateFromApi
+                  ? `basic-${dataVersion}-${step}`
+                  : `basic-new-${step}`
+              }
+              initialData={populateFromApi ? courseData?.basicInfo : undefined}
+              onSubmit={handleBasicInfoSubmit}
+              isSubmitting={creating || updating}
             />
+          ))}
 
-            <StatusBanner error={error} success={success} />
+        {showStep(2) &&
+          (isStepDataLoading ? (
+            <StepLoading />
+          ) : (
+            <EnrollmentFormBuilder
+              key={
+                populateFromApi
+                  ? `enrollment-${dataVersion}-${step}`
+                  : `enrollment-new-${step}`
+              }
+              initialData={populateFromApi ? courseData?.enrollmentForm : undefined}
+              onSubmit={handleEnrollmentSubmit}
+              isSubmitting={savingEnrollment}
+            />
+          ))}
 
-            {step === 1 && <BasicInfoForm initialData={drafts.basicInfo} onSubmit={handleBasicInfoSubmit} />}
+        {showStep(3) &&
+          (isStepDataLoading ? (
+            <StepLoading />
+          ) : (
+            <QuizBuilder
+              key={populateFromApi ? `quiz-${dataVersion}-${step}` : `quiz-new-${step}`}
+              initialData={populateFromApi ? courseData?.quiz : undefined}
+              onSubmit={handleQuizSubmit}
+              onBack={() => handleStepBack(2)}
+              isSubmitting={savingQuiz}
+            />
+          ))}
 
-            {/* Removed the onBack prop entirely so the button disappears */}
-            {step === 2 && <EnrollmentFormBuilder initialData={drafts.enrollmentForm} onSubmit={handleEnrollmentSubmit} />}
+        {showStep(4) &&
+          (isStepDataLoading ? (
+            <StepLoading />
+          ) : (
+            <ExamSettingsForm
+              key={populateFromApi ? `exam-${dataVersion}-${step}` : `exam-new-${step}`}
+              initialData={populateFromApi ? courseData?.examSettings : undefined}
+              onSubmit={handleExamSettingsSubmit}
+              onBack={() => handleStepBack(3)}
+              isSubmitting={savingExam}
+            />
+          ))}
 
-            {step === 3 && <QuizBuilder initialData={drafts.quiz} onSubmit={handleQuizSubmit} onBack={() => setStep(2)} />}
-            {step === 4 && <ExamSettingsForm initialData={drafts.examSettings} onSubmit={handleExamSettingsSubmit} onBack={() => setStep(3)} />}
-            {step === 5 && <CertificateUpload initialData={drafts.certificate} onSubmit={handleCertificateSubmit} onBack={() => setStep(4)} />}
-            {step === 6 && courseId && (
-                <ReviewAndPublish
-                    courseId={courseId}
-                    reviewData={drafts}
-                    onLoadData={() => loadFullCourseData(courseId)}
-                    onPublish={handlePublish}
-                    onBack={() => setStep(5)}
-                />
-            )}
-        </div>
-    );
+        {showStep(5) &&
+          (isStepDataLoading ? (
+            <StepLoading />
+          ) : (
+            <CertificateUpload
+              key={populateFromApi ? `cert-${dataVersion}-${step}` : `cert-new-${step}`}
+              initialData={populateFromApi ? courseData?.certificate : undefined}
+              onSubmit={handleCertificateSubmit}
+              onBack={() => handleStepBack(4)}
+              isSubmitting={uploadingCert}
+            />
+          ))}
+
+        {showStep(6) && activeCourseId && (
+          <ReviewAndPublish
+            courseId={activeCourseId}
+            reviewData={reviewData as Record<string, unknown> | null}
+            loading={loadingFull}
+            onRefresh={syncFromServer}
+            onPublish={handlePublish}
+            onBack={() => handleStepBack(5)}
+            isPublishing={publishing}
+          />
+        )}
+      </>
+
+      {isSaving && (
+        <p className="text-center text-xs text-admin-muted-foreground mt-4">Saving...</p>
+      )}
+    </div>
+  );
 }

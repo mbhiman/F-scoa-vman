@@ -18,10 +18,10 @@ type CourseBasicForm = z.infer<typeof courseBasicSchema>;
 interface BasicInfoFormProps {
     initialData?: any;
     onSubmit: (formData: FormData, rawValues: CourseBasicForm) => Promise<void>;
+    isSubmitting?: boolean;
 }
 
-export function BasicInfoForm({ initialData, onSubmit }: BasicInfoFormProps) {
-    const [isSubmitting, setIsSubmitting] = useState(false);
+export function BasicInfoForm({ initialData, onSubmit, isSubmitting = false }: BasicInfoFormProps) {
 
     const form = useForm<CourseBasicForm>({
         resolver: zodResolver(courseBasicSchema),
@@ -33,6 +33,15 @@ export function BasicInfoForm({ initialData, onSubmit }: BasicInfoFormProps) {
             thumbnail: initialData?.thumbnailUrl || initialData?.thumbnail || undefined
         },
     });
+
+    useEffect(() => {
+        form.reset({
+            title: initialData?.title || "",
+            description: initialData?.description || "",
+            is_ncvet: initialData?.is_ncvet ?? false,
+            thumbnail: initialData?.thumbnailUrl || initialData?.thumbnail || undefined,
+        });
+    }, [initialData, form]);
 
     const currentThumbnail = form.watch("thumbnail");
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -50,7 +59,6 @@ export function BasicInfoForm({ initialData, onSubmit }: BasicInfoFormProps) {
     }, [currentThumbnail]);
 
     const handleSubmit = async (values: CourseBasicForm) => {
-        setIsSubmitting(true);
         const fd = new FormData();
         fd.append("title", values.title);
         if (values.description) fd.append("description", values.description);
@@ -58,7 +66,6 @@ export function BasicInfoForm({ initialData, onSubmit }: BasicInfoFormProps) {
         if (values.thumbnail instanceof File) fd.append("thumbnail", values.thumbnail);
 
         await onSubmit(fd, values);
-        setIsSubmitting(false);
     };
 
     return (
