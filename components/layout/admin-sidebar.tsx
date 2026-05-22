@@ -6,15 +6,13 @@ import {
   LayoutDashboard,
   Users,
   BookOpen,
-  HelpCircle,
-  ClipboardList,
-  Award,
   BarChart3,
   Shield,
   ScrollText,
   Settings,
   GraduationCap,
   PanelLeftClose,
+  FileBarChart,
 } from "lucide-react";
 import { useUIStore } from "@/store/ui-store";
 
@@ -31,9 +29,6 @@ const navItems = [
     items: [
       { href: "/admin/learners", label: "Learners", icon: Users },
       { href: "/admin/courses", label: "Courses", icon: BookOpen },
-      { href: "/admin/questions", label: "Questions", icon: HelpCircle },
-      { href: "/admin/assessments", label: "Assessments", icon: ClipboardList },
-      { href: "/admin/certificates", label: "Certificates", icon: Award },
     ],
   },
   {
@@ -41,10 +36,12 @@ const navItems = [
     items: [
       { href: "/admin/admins", label: "Admins", icon: Shield },
       { href: "/admin/audit-logs", label: "Audit Logs", icon: ScrollText },
+      { href: "/admin/reports", label: "Reports", icon: FileBarChart },
       { href: "/admin/settings", label: "Settings", icon: Settings },
     ],
   },
 ];
+
 
 export function AdminSidebar() {
   const pathname = usePathname();

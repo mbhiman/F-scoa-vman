@@ -61,6 +61,7 @@ const routeLabels: Record<string, string> = {
     "/admin/admins": "Admins",
     "/admin/roles": "Roles & Permissions",
     "/admin/audit-logs": "Audit Logs",
+    "/admin/reports": "Reports",
     "/admin/analytics": "Analytics",
     "/admin/settings": "Settings",
 };
