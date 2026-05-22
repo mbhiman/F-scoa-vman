@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useBuilderStore } from "../../store/course-builder-store";
 import { adminAuthFetch, parseApiError } from "../../lib/admin-api";
@@ -48,11 +48,8 @@ export default function AdminCourseBuilder() {
         }
     };
 
-    // 🚨 FIX 1: Smart Routing & Memory Management
     useEffect(() => {
-        // SCENARIO A: Admin clicked "Create Course" from the table
         if (!routeCourseId || routeCourseId === "create") {
-            // If Zustand remembers an old drafted course, WIPE IT OUT to start fresh.
             if (courseId) {
                 reset();
             }
@@ -61,18 +58,16 @@ export default function AdminCourseBuilder() {
             return;
         }
 
-        // SCENARIO B: We are actively building/saving and the URL matched our memory
         if (courseId === routeCourseId) {
             if (!editMode) setEditMode(true);
             return;
         }
 
-        // SCENARIO C: Admin clicked "Edit" on an existing course from the table
         setEditMode(true);
         void loadFullCourseData(routeCourseId);
         setStep(1);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [routeCourseId]); // Purposely excluding 'courseId' to prevent reset loops
+    }, [routeCourseId]);
 
     const handleReset = () => {
         reset();
@@ -80,6 +75,30 @@ export default function AdminCourseBuilder() {
         setError(""); setSuccess("");
         try { router.replace("/admin/courses/create"); } catch { /* ignore */ }
     };
+
+    // --- GATEKEEPER LOGIC START ---
+
+    // Dynamically calculate the highest step the user is allowed to view
+    const maxAllowedStep = useMemo(() => {
+        if (!courseId) return 1;
+        if (!drafts.enrollmentForm) return 2;
+        if (!drafts.quiz) return 3;
+        if (!drafts.examSettings) return 4;
+        if (!drafts.certificate) return 5;
+        return 6;
+    }, [courseId, drafts]);
+
+    // Intercept stepper clicks to block illegal navigation
+    const handleStepperClick = (targetStep: number) => {
+        // Rule 1: Cannot go back to Basic Info once course ID exists
+        if (courseId && targetStep === 1) return;
+        // Rule 2: Cannot skip ahead of the highest completed step
+        if (targetStep > maxAllowedStep) return;
+
+        setStep(targetStep);
+    };
+
+    // --- GATEKEEPER LOGIC END ---
 
     const handleBasicInfoSubmit = async (formData: FormData, rawValues: any) => {
         setError(""); setSuccess("");
@@ -91,7 +110,6 @@ export default function AdminCourseBuilder() {
                     method: "PATCH",
                     body: formData
                 });
-
                 if (!res.ok) throw new Error(await parseApiError(res));
 
                 setStep(2);
@@ -103,7 +121,6 @@ export default function AdminCourseBuilder() {
                 method: "POST",
                 body: formData
             });
-
             if (!res.ok) throw new Error(await parseApiError(res));
             const json = await res.json();
 
@@ -185,10 +202,6 @@ export default function AdminCourseBuilder() {
 
             if (!res.ok) throw new Error(await parseApiError(res));
 
-            // 🚨 FIX 2: Removed `await loadFullCourseData(id);`
-            // We rely purely on the local Zustand memory (which is perfectly accurate) 
-            // so a slow or buggy backend doesn't overwrite our Step 6 Pre-flight Review!
-
             setStep(6);
             setSuccess("Certificate uploaded. Please review your course.");
         } catch (e: any) {
@@ -221,11 +234,22 @@ export default function AdminCourseBuilder() {
     return (
         <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8 flex flex-col">
             <WizardHeader editMode={editMode} courseId={courseId} onReset={handleReset} />
-            <WizardStepper currentStep={step} courseId={courseId} onStepClick={setStep} />
+
+            {/* Notice we pass maxAllowedStep and the new handler here */}
+            <WizardStepper
+                currentStep={step}
+                courseId={courseId}
+                onStepClick={handleStepperClick}
+                maxAllowedStep={maxAllowedStep}
+            />
+
             <StatusBanner error={error} success={success} />
 
             {step === 1 && <BasicInfoForm initialData={drafts.basicInfo} onSubmit={handleBasicInfoSubmit} />}
-            {step === 2 && <EnrollmentFormBuilder initialData={drafts.enrollmentForm} onSubmit={handleEnrollmentSubmit} onBack={() => setStep(1)} />}
+
+            {/* Removed the onBack prop entirely so the button disappears */}
+            {step === 2 && <EnrollmentFormBuilder initialData={drafts.enrollmentForm} onSubmit={handleEnrollmentSubmit} />}
+
             {step === 3 && <QuizBuilder initialData={drafts.quiz} onSubmit={handleQuizSubmit} onBack={() => setStep(2)} />}
             {step === 4 && <ExamSettingsForm initialData={drafts.examSettings} onSubmit={handleExamSettingsSubmit} onBack={() => setStep(3)} />}
             {step === 5 && <CertificateUpload initialData={drafts.certificate} onSubmit={handleCertificateSubmit} onBack={() => setStep(4)} />}

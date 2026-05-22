@@ -55,7 +55,7 @@ type EnrollmentFormType = z.infer<typeof enrollmentFormSchema>;
 interface EnrollmentFormBuilderProps {
     initialData?: any;
     onSubmit: (data: EnrollmentFormType) => Promise<void>;
-    onBack: () => void;
+    onBack?: () => void;
 }
 
 export function EnrollmentFormBuilder({ initialData, onSubmit, onBack }: EnrollmentFormBuilderProps) {
@@ -227,8 +227,12 @@ export function EnrollmentFormBuilder({ initialData, onSubmit, onBack }: Enrollm
                 </div>
             </div>
 
-            <div className="mt-8 pt-4 flex flex-col sm:flex-row justify-between items-center gap-3 border-t border-admin-border/40">
-                <button type="button" onClick={onBack} disabled={isSubmitting} className={`${btnSecondaryClass} w-full sm:w-auto text-[13px] sm:text-sm cursor-pointer`}>Back</button>
+            <div className={`mt-8 pt-4 flex flex-col sm:flex-row items-center gap-3 border-t border-admin-border/40 ${onBack ? 'justify-between' : 'justify-end'}`}>
+                {onBack && (
+                    <button type="button" onClick={onBack} disabled={isSubmitting} className={`${btnSecondaryClass} w-full sm:w-auto text-[13px] sm:text-sm cursor-pointer`}>
+                        Back
+                    </button>
+                )}
                 <button type="submit" disabled={isSubmitting || !form.formState.isValid} className={`${btnPrimaryClass} w-full sm:w-auto text-[13px] sm:text-sm cursor-pointer`}>
                     {isSubmitting ? "Saving..." : "Save & Continue"} <ChevronRight className="w-4 h-4 ml-1.5" />
                 </button>
