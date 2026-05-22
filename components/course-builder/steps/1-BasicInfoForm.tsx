@@ -9,7 +9,8 @@ const courseBasicSchema = z.object({
     title: z.string().trim().min(1, "Course title is required"),
     description: z.string().trim().optional(),
     is_ncvet: z.boolean(),
-    thumbnail: z.any().optional(),
+    // STRICT VALIDATION: Ensures a file or existing URL is present before allowing progression
+    thumbnail: z.any().refine((val) => val !== undefined && val !== null && val !== "", "Course thumbnail is strictly required"),
 });
 
 type CourseBasicForm = z.infer<typeof courseBasicSchema>;
@@ -29,7 +30,7 @@ export function BasicInfoForm({ initialData, onSubmit }: BasicInfoFormProps) {
             title: initialData?.title || "",
             description: initialData?.description || "",
             is_ncvet: initialData?.is_ncvet ?? false,
-            thumbnail: initialData?.thumbnailUrl || undefined
+            thumbnail: initialData?.thumbnailUrl || initialData?.thumbnail || undefined
         },
     });
 
@@ -101,7 +102,7 @@ export function BasicInfoForm({ initialData, onSubmit }: BasicInfoFormProps) {
                 </div>
 
                 <div className="xl:col-span-1 flex flex-col">
-                    <label className="text-[12px] sm:text-[13px] font-semibold text-admin-fg mb-2 block">Course Thumbnail</label>
+                    <label className="text-[12px] sm:text-[13px] font-semibold text-admin-fg mb-2 block">Course Thumbnail <span className="text-red-500">*</span></label>
                     <Controller
                         control={form.control}
                         name="thumbnail"
@@ -130,14 +131,15 @@ export function BasicInfoForm({ initialData, onSubmit }: BasicInfoFormProps) {
                         )}
                     />
                     {form.formState.errors.thumbnail && (
-                        <p className="mt-1.5 text-[11px] text-red-500">{(form.formState.errors.thumbnail as any).message}</p>
+                        <p className="mt-1.5 text-[11px] font-medium text-red-500">{(form.formState.errors.thumbnail as any).message}</p>
                     )}
                 </div>
             </div>
 
             <div className="mt-8 pt-4 flex justify-end border-t border-admin-border/40">
                 <button type="submit" disabled={isSubmitting || !form.formState.isValid} className={`${btnPrimaryClass} w-full sm:w-auto text-[13px] sm:text-sm cursor-pointer`}>
-                    {isSubmitting ? "Saving..." : "Save & Continue"} <ChevronRight className="w-4 h-4 ml-1.5" />
+                    {/* BUTTON TEXT UPDATED HERE */}
+                    {isSubmitting ? "Confirming..." : "Confirm & Continue"} <ChevronRight className="w-4 h-4 ml-1.5" />
                 </button>
             </div>
         </form>

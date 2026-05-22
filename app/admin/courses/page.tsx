@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DataTable } from "@/components/tables/data-table";
 import { type ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, PlusCircle, Edit } from "lucide-react";
+import { Ban, CheckCircle, PlusCircle, Edit } from "lucide-react";
 import { format } from "date-fns";
 import { adminAuthFetch } from "@/lib/admin-api";
 
@@ -95,18 +95,54 @@ export default function CoursesPage() {
     {
       id: "actions",
       header: "",
-      cell: ({ row }) => (
-        <div className="flex justify-end gap-2">
-          <button
-            onClick={() => router.push(`/admin/courses/${row.original.id}`)}
-            className="p-1.5 text-admin-muted-foreground hover:text-admin-primary hover:bg-admin-primary/10 rounded transition-colors"
-            title="Edit Course"
-          >
-            <Edit className="w-4 h-4" />
-          </button>
-        </div>
-      )
-    },
+      cell: ({ row }) => {
+        const course = row.original;
+        // Determine if the course is already disabled
+        const isDisabled = course.status === "DISABLED";
+
+        // Logic to instantly disable/enable the course
+        const toggleCourseStatus = async () => {
+          if (confirm(`Are you sure you want to ${isDisabled ? 'enable' : 'disable'} "${course.title}"?`)) {
+            try {
+              // Send PATCH request with the opposite status
+              await adminAuthFetch(`/admin/courses/${course.id}/status`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: isDisabled ? "DRAFT" : "DISABLED" }) // Revert to DRAFT when re-enabling
+              });
+
+              // Simple refresh to reflect changes (or trigger a refetch if using a custom hook)
+              window.location.reload();
+            } catch (e) {
+              alert("Failed to update the course status.");
+            }
+          }
+        };
+
+        return (
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => router.push(`/admin/courses/${course.id}`)}
+              className="p-1.5 text-admin-muted-foreground hover:text-admin-primary hover:bg-admin-primary/10 rounded transition-colors"
+              title="Edit Course"
+            >
+              <Edit className="w-4 h-4" />
+            </button>
+
+            <button
+              onClick={toggleCourseStatus}
+              className={`p-1.5 rounded transition-colors ${isDisabled
+                ? "text-emerald-500 hover:bg-emerald-500/10"
+                : "text-admin-muted-foreground hover:text-red-500 hover:bg-red-500/10"
+                }`}
+              title={isDisabled ? "Enable Course" : "Disable Course"}
+            >
+              {isDisabled ? <CheckCircle className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
+            </button>
+          </div>
+        );
+      }
+    }
   ];
 
   return (
