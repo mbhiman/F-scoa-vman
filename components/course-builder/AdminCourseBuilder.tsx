@@ -13,14 +13,15 @@ import {
   useUpdateCourseStatus,
   getMaxBuilderStep,
   mapApiToBuilderDrafts,
+  formatValidationErrors,
   type SaveEnrollmentFormPayload,
   type SaveQuizPayload,
   type SaveExamSettingsPayload,
 } from "@/hooks/coursebuilder";
 
+import { adminToastError, adminToastSuccess } from "@/lib/admin-toast";
 import { WizardHeader } from "./ui/WizardHeader";
 import { WizardStepper } from "./ui/WizardStepper";
-import { StatusBanner } from "./ui/StatusBanner";
 import { BasicInfoForm } from "./steps/1-BasicInfoForm";
 import { EnrollmentFormBuilder } from "./steps/2-EnrollmentForm";
 import { QuizBuilder } from "./steps/3-QuizBuilder";
@@ -66,7 +67,6 @@ export default function AdminCourseBuilder() {
   const [createCourseId, setCreateCourseId] = useState<string | null>(null);
   /** Create wizard: unlock next step only after previous step saved successfully. */
   const [highestStepReached, setHighestStepReached] = useState(1);
-  const [success, setSuccess] = useState("");
 
   /** Create: only the id created in this session. Edit: route id. */
   const activeCourseId = isCreateFlow ? createCourseId : editCourseId;
@@ -91,18 +91,41 @@ export default function AdminCourseBuilder() {
     useCreateCourse();
   const { update, loading: updating, error: updateError, validationErrors: updateValidationErrors } =
     useUpdateCourse(activeCourseId);
-  const { save: saveEnrollment, loading: savingEnrollment, error: enrollmentError } =
-    useSaveEnrollmentForm(activeCourseId);
-  const { save: saveQuiz, loading: savingQuiz, error: quizError } = useSaveQuiz(activeCourseId);
-  const { save: saveExamSettings, loading: savingExam, error: examError } =
-    useSaveExamSettings(activeCourseId);
-  const { upload: uploadCertificate, loading: uploadingCert, error: certificateError } =
-    useUploadCertificate(activeCourseId);
-  const { updateStatus, loading: publishing, error: publishError } =
-    useUpdateCourseStatus(activeCourseId);
+  const {
+    save: saveEnrollment,
+    loading: savingEnrollment,
+    error: enrollmentError,
+    validationErrors: enrollmentValidationErrors,
+  } = useSaveEnrollmentForm(activeCourseId);
+  const {
+    save: saveQuiz,
+    loading: savingQuiz,
+    error: quizError,
+    validationErrors: quizValidationErrors,
+  } = useSaveQuiz(activeCourseId);
+  const {
+    save: saveExamSettings,
+    loading: savingExam,
+    error: examError,
+    validationErrors: examValidationErrors,
+  } = useSaveExamSettings(activeCourseId);
+  const {
+    upload: uploadCertificate,
+    loading: uploadingCert,
+    error: certificateError,
+    validationErrors: certificateValidationErrors,
+  } = useUploadCertificate(activeCourseId);
+  const {
+    updateStatus,
+    loading: publishing,
+    error: publishError,
+    validationErrors: publishValidationErrors,
+  } = useUpdateCourseStatus(activeCourseId);
 
   const prevEditIdRef = useRef<string | null>(null);
   const prevRouteCourseIdRef = useRef<string | undefined>(undefined);
+  const publishRedirectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastToastErrorRef = useRef("");
 
   // Entering /admin/courses/create — blank wizard (not when already on create mid-flow)
   useEffect(() => {
@@ -113,8 +136,11 @@ export default function AdminCourseBuilder() {
     setCreateCourseId(null);
     setStep(1);
     setHighestStepReached(1);
-    setSuccess("");
   }, [routeCourseId]);
+
+  useEffect(() => {
+    if (!isEditFlow) prevEditIdRef.current = null;
+  }, [isEditFlow]);
 
   // Edit: restore step from URL (reload) or step 1 when opening from list (no ?step=)
   useEffect(() => {
@@ -129,9 +155,15 @@ export default function AdminCourseBuilder() {
       setStep(1);
       clearEditStepSession(editCourseId);
     }
-    setSuccess("");
     prevEditIdRef.current = editCourseId;
   }, [isEditFlow, editCourseId, searchParams]);
+
+  useEffect(
+    () => () => {
+      if (publishRedirectRef.current) clearTimeout(publishRedirectRef.current);
+    },
+    [],
+  );
 
   // Browser back/forward: stay in sync with ?step= in the URL
   const stepQuery = searchParams.get("step");
@@ -162,6 +194,13 @@ export default function AdminCourseBuilder() {
     return 1;
   }, [isCreateFlow, highestStepReached, courseData]);
 
+  // Edit: URL step cannot exceed completed sections (e.g. bookmarked ?step=6)
+  useEffect(() => {
+    if (!isEditFlow || !courseData) return;
+    const max = getMaxBuilderStep(courseData);
+    setStep((current) => (current > max ? max : current));
+  }, [isEditFlow, courseData]);
+
   const displayError = useMemo(() => {
     const hookError =
       loadError ||
@@ -173,10 +212,16 @@ export default function AdminCourseBuilder() {
       certificateError ||
       publishError;
     if (hookError) return hookError;
-    const validation = [...createValidationErrors, ...updateValidationErrors];
-    if (validation.length > 0) {
-      return validation.map((e) => `${e.field}: ${e.message}`).join(", ");
-    }
+    const validation = [
+      ...createValidationErrors,
+      ...updateValidationErrors,
+      ...enrollmentValidationErrors,
+      ...quizValidationErrors,
+      ...examValidationErrors,
+      ...certificateValidationErrors,
+      ...publishValidationErrors,
+    ];
+    if (validation.length > 0) return formatValidationErrors(validation);
     return "";
   }, [
     loadError,
@@ -189,7 +234,25 @@ export default function AdminCourseBuilder() {
     publishError,
     createValidationErrors,
     updateValidationErrors,
+    enrollmentValidationErrors,
+    quizValidationErrors,
+    examValidationErrors,
+    certificateValidationErrors,
+    publishValidationErrors,
   ]);
+
+  const showLoadErrorPanel =
+    isEditFlow && Boolean(loadError) && !loadingFull && !courseData;
+
+  useEffect(() => {
+    if (showLoadErrorPanel || !displayError) {
+      if (!displayError) lastToastErrorRef.current = "";
+      return;
+    }
+    if (displayError === lastToastErrorRef.current) return;
+    lastToastErrorRef.current = displayError;
+    adminToastError(displayError);
+  }, [displayError, showLoadErrorPanel]);
 
   const advanceCreate = (completedStep: number, nextStep: number) => {
     setHighestStepReached((prev) => Math.max(prev, completedStep + 1, nextStep));
@@ -206,20 +269,17 @@ export default function AdminCourseBuilder() {
     setCreateCourseId(null);
     setHighestStepReached(1);
     setStep(1);
-    setSuccess("");
     router.replace("/admin/courses/create");
   };
 
   const handleBasicInfoSubmit = async (formData: FormData, rawValues: Record<string, unknown>) => {
-    setSuccess("");
-
     if (isCreateFlow && !createCourseId && !activeCourseId) {
       const result = await create(formData);
       if (!result) return;
 
       setCreateCourseId(result.id);
       advanceCreate(1, 2);
-      setSuccess("Course created. Continue to enrollment.");
+      adminToastSuccess("Course created. Continue to enrollment.");
       return;
     }
 
@@ -229,16 +289,15 @@ export default function AdminCourseBuilder() {
 
     if (isCreateFlow) {
       advanceCreate(1, 2);
-      setSuccess("Basic info saved. Continue to enrollment.");
+      adminToastSuccess("Basic info saved. Continue to enrollment.");
     } else {
       setStep(2);
-      setSuccess("Course updated.");
+      adminToastSuccess("Course updated.");
       syncFromServer();
     }
   };
 
   const handleEnrollmentSubmit = async (data: SaveEnrollmentFormPayload) => {
-    setSuccess("");
     if (!activeCourseId) return;
 
     const result = await saveEnrollment(data);
@@ -246,16 +305,15 @@ export default function AdminCourseBuilder() {
 
     if (isCreateFlow) {
       advanceCreate(2, 3);
-      setSuccess("Enrollment form saved. Continue to quiz.");
+      adminToastSuccess("Enrollment form saved. Continue to quiz.");
     } else {
       setStep(3);
-      setSuccess("Enrollment form saved.");
+      adminToastSuccess("Enrollment form saved.");
       syncFromServer();
     }
   };
 
   const handleQuizSubmit = async (data: SaveQuizPayload) => {
-    setSuccess("");
     if (!activeCourseId) return;
 
     const result = await saveQuiz(data);
@@ -263,16 +321,15 @@ export default function AdminCourseBuilder() {
 
     if (isCreateFlow) {
       advanceCreate(3, 4);
-      setSuccess("Quiz saved. Continue to exam settings.");
+      adminToastSuccess("Quiz saved. Continue to exam settings.");
     } else {
       setStep(4);
-      setSuccess("Quiz saved.");
+      adminToastSuccess("Quiz saved.");
       syncFromServer();
     }
   };
 
   const handleExamSettingsSubmit = async (data: SaveExamSettingsPayload) => {
-    setSuccess("");
     if (!activeCourseId) return;
 
     const result = await saveExamSettings(data);
@@ -280,16 +337,15 @@ export default function AdminCourseBuilder() {
 
     if (isCreateFlow) {
       advanceCreate(4, 5);
-      setSuccess("Exam settings saved. Continue to certificate.");
+      adminToastSuccess("Exam settings saved. Continue to certificate.");
     } else {
       setStep(5);
-      setSuccess("Exam settings saved.");
+      adminToastSuccess("Exam settings saved.");
       syncFromServer();
     }
   };
 
   const handleCertificateSubmit = async (formData: FormData, rawValues: Record<string, unknown>) => {
-    setSuccess("");
     if (!activeCourseId) return;
 
     const result = await uploadCertificate(formData);
@@ -297,23 +353,23 @@ export default function AdminCourseBuilder() {
 
     if (isCreateFlow) {
       advanceCreate(5, 6);
-      setSuccess("Certificate uploaded. Review and publish.");
+      adminToastSuccess("Certificate uploaded. Review and publish.");
     } else {
       setStep(6);
-      setSuccess("Certificate uploaded.");
+      adminToastSuccess("Certificate uploaded.");
       syncFromServer();
     }
   };
 
   const handlePublish = async () => {
-    setSuccess("");
     if (!activeCourseId) return;
 
     const result = await updateStatus("PUBLISHED");
     if (!result) return;
 
-    setSuccess("Course published successfully! Redirecting...");
-    setTimeout(() => router.push("/admin/courses"), 1500);
+    adminToastSuccess("Course published successfully! Redirecting...");
+    if (publishRedirectRef.current) clearTimeout(publishRedirectRef.current);
+    publishRedirectRef.current = setTimeout(() => router.push("/admin/courses"), 1500);
   };
 
   const handleStepBack = (prevStep: number) => {
@@ -356,7 +412,18 @@ export default function AdminCourseBuilder() {
         sequentialOnly={isCreateFlow}
       />
 
-      <StatusBanner error={displayError} success={success} />
+      {isEditFlow && loadError && !loadingFull && !courseData && (
+        <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-500 flex flex-wrap items-center justify-between gap-3">
+          <span>{loadError}</span>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="text-sm font-semibold underline hover:no-underline"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       <>
         {showStep(1) &&

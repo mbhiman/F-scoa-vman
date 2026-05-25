@@ -56,6 +56,16 @@ export const extractValidationErrors = (body: unknown): ValidationError[] => {
     .filter((x) => x.field.trim() !== "" && x.message.trim() !== "");
 };
 
+export const formatValidationErrors = (errors: ValidationError[]): string =>
+  errors.map((e) => `${e.field}: ${e.message}`).join(", ");
+
+export const getFetchErrorMessage = (err: unknown, fallback: string): string => {
+  if (err instanceof TypeError) {
+    return "Network error. Check your connection and try again.";
+  }
+  return err instanceof Error ? err.message : fallback;
+};
+
 export const extractErrorMessage = (res: Response, body: unknown): string => {
   if (res.status === 401) return ADMIN_SESSION_EXPIRED;
 
@@ -107,6 +117,10 @@ export const adminCourseFetch = async (
 
   const headers = new Headers(init.headers);
   headers.set("Authorization", `Bearer ${token}`);
+  // Let the browser set multipart boundary for FormData uploads
+  if (init.body instanceof FormData) {
+    headers.delete("Content-Type");
+  }
 
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const res = await fetch(`${BASE_URL}${normalizedPath}`, { ...init, headers });

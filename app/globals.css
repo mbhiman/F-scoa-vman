@@ -93,6 +93,7 @@
 
   /* Elevation */
   --shadow-admin-card: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+  --shadow-admin-card-hover: 0 12px 28px -8px rgba(22, 66, 185, 0.12);
 
   /* Fonts */
   --font-primary: var(--font-geist-sans);
@@ -213,7 +214,26 @@ pre {
   }
 
   .admin-card {
-    @apply rounded-xl border border-admin-border bg-admin-card shadow-admin-card;
+    @apply rounded-xl border border-admin-border bg-admin-card shadow-admin-card transition-shadow duration-300;
+  }
+
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--admin-muted) 40%, transparent) transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--admin-muted) 35%, transparent);
+    border-radius: 999px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
   }
 
   .badge-success {
@@ -299,4 +319,41 @@ pre {
   .policy-checkbox {
     @apply mt-1 h-4 w-4 rounded border border-border bg-background;
   }
+}
+
+/* =========================
+   ADMIN SONNER TOASTS
+========================= */
+
+.admin-sonner-toaster [data-sonner-toaster] {
+  font-family: var(--font-ui), var(--font-primary), sans-serif;
+}
+
+.admin-sonner-toaster [data-sonner-toast] {
+  font-family: var(--font-ui), var(--font-primary), sans-serif;
+}
+
+.admin-sonner-toaster [data-sonner-toast] [data-title] {
+  font-family: var(--font-ui), var(--font-primary), sans-serif;
+}
+
+.admin-sonner-toaster [data-sonner-toast] [data-icon] {
+  margin: 0;
+}
+
+.admin-sonner-toaster [data-sonner-toast] [data-content] {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-sonner-toaster [data-sonner-toast] [data-close-button] {
+  position: absolute !important;
+  top: 50% !important;
+  right: 0.625rem !important;
+  left: auto !important;
+  transform: translateY(-50%) !important;
+}
+
+.admin-sonner-toaster [data-sonner-toast][data-swiping="true"]::before {
+  border-radius: 0.75rem;
 }

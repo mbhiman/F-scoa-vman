@@ -1,6 +1,7 @@
 // app/admin/layout.tsx
 import { AdminSidebar } from "@/components/layout/admin-sidebar";
 import { AdminTopNav } from "@/components/layout/admin-topnav";
+import { AdminToaster } from "@/components/admin/AdminToaster";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -12,6 +13,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {children}
         </main>
       </div>
+      <AdminToaster />
     </div>
   );
 }

@@ -109,7 +109,13 @@ export function useSaveQuiz(courseId: string | null | undefined) {
         setSuccess(true);
         return env.data;
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to save quiz.");
+        setError(
+          err instanceof TypeError
+            ? "Network error. Check your connection and try again."
+            : err instanceof Error
+              ? err.message
+              : "Failed to save quiz.",
+        );
         setSuccess(false);
         return null;
       } finally {

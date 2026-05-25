@@ -89,7 +89,13 @@ export function useUpdateCourseStatus(defaultCourseId?: string | null) {
         setSuccess(true);
         return env.data;
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to update course status.");
+        setError(
+          err instanceof TypeError
+            ? "Network error. Check your connection and try again."
+            : err instanceof Error
+              ? err.message
+              : "Failed to update course status.",
+        );
         setSuccess(false);
         return null;
       } finally {

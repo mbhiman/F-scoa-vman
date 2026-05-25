@@ -136,7 +136,13 @@ export function useSaveEnrollmentForm(courseId: string | null | undefined) {
         setSuccess(true);
         return env.data;
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to save enrollment form.");
+        setError(
+          err instanceof TypeError
+            ? "Network error. Check your connection and try again."
+            : err instanceof Error
+              ? err.message
+              : "Failed to save enrollment form.",
+        );
         setSuccess(false);
         return null;
       } finally {

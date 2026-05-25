@@ -112,7 +112,13 @@ export function useListCourses(filters: ListCoursesFilters) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         setData([]);
         setMeta(null);
-        setError(err instanceof Error ? err.message : "Failed to fetch courses.");
+        setError(
+          err instanceof TypeError
+            ? "Network error. Check your connection and try again."
+            : err instanceof Error
+              ? err.message
+              : "Failed to fetch courses.",
+        );
       } finally {
         setLoading(false);
       }
@@ -138,7 +144,7 @@ export function useListCourses(filters: ListCoursesFilters) {
       window.clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [fetchCourses, refetchKey, filters.search]);
+  }, [fetchCourses, refetchKey, query]);
 
   const refetch = useCallback(() => setRefetchKey((x) => x + 1), []);
 

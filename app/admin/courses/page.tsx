@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DataTable } from "@/components/tables/data-table";
 import { type ColumnDef } from "@tanstack/react-table";
 import { Ban, CheckCircle, PlusCircle, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import { adminToastError, adminToastSuccess } from "@/lib/admin-toast";
 import {
   useListCourses,
   useDeleteCourse,
@@ -20,8 +21,20 @@ export default function CoursesPage() {
   const { remove, loading: deleting, error: deleteError } = useDeleteCourse();
   const { updateStatus, loading: statusLoading, error: statusError } = useUpdateCourseStatus();
 
-  const [actionError, setActionError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const lastToastErrorRef = useRef("");
+
+  const listError = statusError || deleteError || error;
+
+  useEffect(() => {
+    if (!listError) {
+      lastToastErrorRef.current = "";
+      return;
+    }
+    if (listError === lastToastErrorRef.current) return;
+    lastToastErrorRef.current = listError;
+    adminToastError(listError);
+  }, [listError]);
 
   const toggleCourseStatus = useCallback(
     async (course: AdminCourseListItem) => {
@@ -32,11 +45,13 @@ export default function CoursesPage() {
         return;
       }
 
-      setActionError(null);
       setBusyId(course.id);
 
       const result = await updateStatus(nextStatus, course.id);
-      if (result) refetch();
+      if (result) {
+        adminToastSuccess(isDisabled ? "Course enabled." : "Course disabled.");
+        refetch();
+      }
 
       setBusyId(null);
     },
@@ -45,19 +60,17 @@ export default function CoursesPage() {
 
   const deleteCourse = useCallback(
     async (course: AdminCourseListItem) => {
-      if (
-        !confirm(
-          `Delete "${course.title}"? This cannot be undone.`,
-        )
-      ) {
+      if (!confirm(`Delete "${course.title}"? This cannot be undone.`)) {
         return;
       }
 
-      setActionError(null);
       setBusyId(course.id);
 
       const ok = await remove(course.id);
-      if (ok) refetch();
+      if (ok) {
+        adminToastSuccess("Course deleted.");
+        refetch();
+      }
 
       setBusyId(null);
     },
@@ -105,11 +118,13 @@ export default function CoursesPage() {
     {
       accessorKey: "createdAt",
       header: "Created On",
-      cell: ({ row }) => (
-        <span className="text-admin-muted-foreground text-sm">
-          {format(new Date(row.getValue("createdAt")), "MMM dd, yyyy")}
-        </span>
-      ),
+      cell: ({ row }) => {
+        const raw = row.getValue<string>("createdAt");
+        const date = raw ? new Date(raw) : null;
+        const label =
+          date && !Number.isNaN(date.getTime()) ? format(date, "MMM dd, yyyy") : "—";
+        return <span className="text-admin-muted-foreground text-sm">{label}</span>;
+      },
     },
     {
       id: "actions",
@@ -157,8 +172,6 @@ export default function CoursesPage() {
     },
   ];
 
-  const bannerError = actionError || statusError || deleteError || error;
-
   return (
     <div className="space-y-6">
       <div>
@@ -167,12 +180,6 @@ export default function CoursesPage() {
           Manage training courses, enrollments, and configurations.
         </p>
       </div>
-
-      {bannerError && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-500">
-          {bannerError}
-        </div>
-      )}
 
       <DataTable
         columns={columns}

@@ -68,7 +68,13 @@ export function useDeleteCourse() {
       setSuccess(true);
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete course.");
+      setError(
+        err instanceof TypeError
+          ? "Network error. Check your connection and try again."
+          : err instanceof Error
+            ? err.message
+            : "Failed to delete course.",
+      );
       setSuccess(false);
       return false;
     } finally {

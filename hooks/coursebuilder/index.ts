@@ -5,7 +5,7 @@ export { useCreateCourse } from "./useCreateCourse";
 export type { CreateCourseResult } from "./useCreateCourse";
 
 export { useUpdateCourse } from "./useUpdateCourse";
-export type { UpdateCourseResult } from "./useUpdateCourse";
+export type { UpdateCourseInput, UpdateCourseResult } from "./useUpdateCourse";
 
 export { useDeleteCourse } from "./useDeleteCourse";
 
@@ -51,6 +51,8 @@ export {
   listCoursesPath,
   getPreFetchError,
   extractErrorMessage,
+  formatValidationErrors,
+  getFetchErrorMessage,
   safeReadJson,
   ADMIN_SESSION_EXPIRED,
   BACKEND_NOT_CONFIGURED,

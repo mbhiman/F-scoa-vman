@@ -70,6 +70,7 @@ export function useGetFullCourse(courseId: string | null | undefined) {
         return;
       }
 
+      setData(null);
       setLoading(true);
       setError(null);
 
@@ -99,7 +100,13 @@ export function useGetFullCourse(courseId: string | null | undefined) {
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         setData(null);
-        setError(err instanceof Error ? err.message : "Failed to load course data.");
+        setError(
+          err instanceof TypeError
+            ? "Network error. Check your connection and try again."
+            : err instanceof Error
+              ? err.message
+              : "Failed to load course data.",
+        );
       } finally {
         setLoading(false);
       }
