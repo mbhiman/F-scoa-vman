@@ -1,9 +1,9 @@
-import React from 'react'
+import { AdminStudentsList } from "@/components/admin/students/AdminStudentsList";
 
-function LearnerPage() {
+export default function LearnersPage() {
   return (
-    <div>LearnerPage</div>
-  )
+    <div className="w-full min-h-0">
+      <AdminStudentsList />
+    </div>
+  );
 }
-
-export default LearnerPage
